@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BS Tech Limited — Worker</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="shell">
+        <div class="topbar">
+          <div class="brand">
+            <div class="brand-mark">BS</div>
+            <div>BS Tech Limited</div>
+          </div>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">
+            Logout
+          </button>
+        </div>
+
+        <!-- Dashboard -->
+        <section id="dashboardView" class="card">
+          <h1 class="welcome">Welcome, <span id="workerName">…</span></h1>
+          <p class="muted">
+            Complete today’s surveys one by one. After each submit there is a
+            1-minute wait before the next survey.
+          </p>
+
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-label">Work date</span>
+              <span class="stat-value stat-value-sm" id="statWorkDate">—</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Today total</span>
+              <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Pending</span>
+              <span class="stat-value" id="statPending">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Completed</span>
+              <span class="stat-value" id="statCompleted">0</span>
+            </div>
+          </div>
+
+          <div id="dashMessage" class="alert alert-info hidden"></div>
+
+          <div class="btn-row">
+            <button id="startWorkBtn" class="btn btn-primary" type="button">
+              Start Work
+            </button>
+            <button id="refreshBtn" class="btn btn-secondary" type="button">
+              Refresh Status
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 class="section-title">Work completed by date</h2>
+          <p class="muted" style="margin-top: 0">
+            Dates where you finished (or partially finished) your assigned
+            surveys.
+          </p>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Progress</th>
+                  <th>Status</th>
+                  <th>Finished at</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr>
+                  <td colspan="4" class="muted">No history yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Work view -->
+        <section id="workView" class="card hidden">
+          <div class="topbar" style="margin-bottom: 8px">
+            <div>
+              <div class="section-title" style="margin: 0">
+                Survey Work · <span id="workDateLabel">—</span>
+              </div>
+              <div class="muted" id="progressText">0 / 0 completed</div>
+            </div>
+            <button id="backDashBtn" class="btn btn-secondary" type="button">
+              Dashboard
+            </button>
+          </div>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+
+          <div id="workMessage" class="alert alert-info hidden"></div>
+
+          <!-- Cooldown -->
+          <div id="cooldownPanel" class="cooldown-box hidden">
+            <div class="muted">Next survey unlocks in</div>
+            <div class="cooldown-timer" id="cooldownTimer">1:00</div>
+            <p class="muted">Please wait. The timer is enforced by the server.</p>
+          </div>
+
+          <!-- Survey form -->
+          <div id="surveyPanel" class="hidden">
+            <div class="survey-question" id="surveyQuestion">Question</div>
+            <div class="options" id="optionsList"></div>
+            <button id="submitBtn" class="btn btn-primary" type="button" disabled>
+              Submit Answer
+            </button>
+          </div>
+
+          <!-- All done -->
+          <div id="donePanel" class="cooldown-box hidden">
+            <div class="alert alert-ok" style="display: inline-block">
+              All surveys complete for this date. Great work!
+            </div>
+            <div style="margin-top: 16px">
+              <button id="doneBackBtn" class="btn btn-primary" type="button">
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="/js/worker.js"></script>
+  </body>
+</html>

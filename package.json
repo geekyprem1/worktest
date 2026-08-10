@@ -1,0 +1,21 @@
+{
+  "name": "bs-tech-limited-survey-work",
+  "version": "1.1.0",
+  "description": "BS Tech Limited — survey work app (Vercel + Supabase)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node -r dotenv/config server.js dotenv_config_path=.env.local",
+    "seed": "node scripts/seed-templates.js",
+    "seed:supabase": "node scripts/seed-supabase.js",
+    "dev": "node -r dotenv/config server.js dotenv_config_path=.env.local"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

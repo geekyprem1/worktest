@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BS Tech Limited — Admin</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="shell">
+        <div class="topbar">
+          <div class="brand">
+            <div class="brand-mark">BS</div>
+            <div>BS Tech Limited · Admin</div>
+          </div>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">
+            Logout
+          </button>
+        </div>
+
+        <section class="card">
+          <h1 class="welcome">Welcome, <span id="adminName">…</span></h1>
+          <p class="muted">
+            Add workers, then generate or update <strong>today’s</strong> daily
+            survey batch for every worker.
+          </p>
+
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-label">Templates</span>
+              <span class="stat-value" id="statTemplates">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Workers</span>
+              <span class="stat-value" id="statWorkers">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Today pending</span>
+              <span class="stat-value" id="statPending">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Today completed</span>
+              <span class="stat-value" id="statCompleted">0</span>
+            </div>
+          </div>
+
+          <div class="muted" id="workDateLine" style="margin-bottom: 4px">
+            Work date: —
+          </div>
+          <div class="muted" id="generatedAt" style="margin-bottom: 16px">
+            Last generated: —
+          </div>
+
+          <div id="message" class="alert alert-ok hidden"></div>
+          <div id="error" class="alert alert-error hidden"></div>
+        </section>
+
+        <section class="card panel">
+          <h2 class="section-title">Add worker user</h2>
+          <p class="muted" style="margin-top: 0">
+            New accounts are saved to the local users file and can log in
+            immediately.
+          </p>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="newUserId">User ID</label>
+              <input
+                id="newUserId"
+                type="text"
+                placeholder="e.g. ravi01"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form-group">
+              <label for="newName">Display name</label>
+              <input
+                id="newName"
+                type="text"
+                placeholder="e.g. Ravi Kumar"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form-group">
+              <label for="newPassword">Password</label>
+              <input
+                id="newPassword"
+                type="text"
+                placeholder="min 4 characters"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button id="addUserBtn" class="btn btn-primary" type="button">
+              Add User
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 class="section-title">Workers</h2>
+          <div class="table-wrap">
+            <table class="data-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Today</th>
+                  <th>Days done</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="5" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card panel">
+          <h2 class="section-title">Update daily surveys</h2>
+          <p class="muted" style="margin-top: 0">
+            Sets today’s work for <strong>all workers</strong>. Generating again
+            replaces today’s batch (previous progress for that day is archived).
+          </p>
+
+          <div class="chip-row" id="quickCounts">
+            <button class="chip" type="button" data-count="40">40</button>
+            <button class="chip active" type="button" data-count="50">50</button>
+            <button class="chip" type="button" data-count="100">100</button>
+          </div>
+
+          <div class="form-group" style="max-width: 220px">
+            <label for="countInput">Surveys per worker today</label>
+            <input
+              id="countInput"
+              type="number"
+              min="1"
+              max="500"
+              value="50"
+            />
+          </div>
+
+          <div class="btn-row">
+            <button id="generateBtn" class="btn btn-primary" type="button">
+              Generate / Update Today
+            </button>
+            <button id="refreshBtn" class="btn btn-secondary" type="button">
+              Refresh
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="/js/admin.js"></script>
+  </body>
+</html>
