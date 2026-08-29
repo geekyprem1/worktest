@@ -14,6 +14,7 @@ try {
 
 const { getSupabase, isSupabaseConfigured } = require("../lib/supabase");
 const { buildTemplates } = require("../lib/templates-generate");
+const { buildFormTemplates } = require("../lib/form-templates-generate");
 
 async function main() {
   if (!isSupabaseConfigured()) {
@@ -72,6 +73,34 @@ async function main() {
     process.stdout.write(`  ${Math.min(i + chunkSize, rows.length)}/${rows.length}\r`);
   }
 
+  const formTemplates = buildFormTemplates(500);
+  const formRows = formTemplates.map((t) => ({
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    fields: t.fields,
+  }));
+
+  console.log(`Upserting ${formRows.length} form templates...`);
+
+  for (let i = 0; i < formRows.length; i += chunkSize) {
+    const chunk = formRows.slice(i, i + chunkSize);
+    const { error } = await sb.from("form_templates").upsert(chunk, {
+      onConflict: "id",
+    });
+    if (error) {
+      console.error("Form templates chunk failed at", i, error);
+      if (/relation .* does not exist/i.test(error.message || "")) {
+        console.error(
+          "\nFix: Supabase SQL Editor me pehle supabase/migration-form-tasks.sql chalao,\n" +
+            "phir: npm run seed:supabase"
+        );
+      }
+      process.exit(1);
+    }
+    process.stdout.write(`  ${Math.min(i + chunkSize, formRows.length)}/${formRows.length}\r`);
+  }
+
   // Ensure default users exist
   const { error: userErr } = await sb.from("users").upsert(
     [
@@ -95,7 +124,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("\nDone. Templates + default users ready in Supabase.");
+  console.log("\nDone. Survey + form templates + default users ready in Supabase.");
 }
 
 main().catch((err) => {

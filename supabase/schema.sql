@@ -17,12 +17,30 @@ create table if not exists templates (
   options jsonb not null
 );
 
+-- 500 form-fill templates (dummy application forms)
+create table if not exists form_templates (
+  id text primary key,
+  title text not null,
+  description text,
+  fields jsonb not null
+);
+
+-- Per-worker task assignment preferences
+create table if not exists user_task_settings (
+  user_id text primary key references users(user_id) on delete cascade,
+  task_mode text not null default 'survey',
+  survey_count int not null default 50,
+  form_count int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
 -- Today's (or any day's) work queue per worker
 create table if not exists daily_work (
   id bigserial primary key,
   work_date date not null,
   user_id text not null references users(user_id) on delete cascade,
   survey_count int not null default 0,
+  work_type text not null default 'survey',
   generated_at timestamptz,
   last_submitted_at timestamptz,
   items jsonb not null default '[]'::jsonb,
@@ -55,5 +73,7 @@ on conflict (user_id) do nothing;
 -- Keep RLS OFF so seed + API inserts work with service_role (and avoid accidental anon lockouts).
 alter table users disable row level security;
 alter table templates disable row level security;
+alter table form_templates disable row level security;
+alter table user_task_settings disable row level security;
 alter table daily_work disable row level security;
 alter table completions disable row level security;

@@ -22,8 +22,8 @@
         <section class="card">
           <h1 class="welcome">Welcome, <span id="adminName">…</span></h1>
           <p class="muted">
-            Add workers, then generate or update <strong>today’s</strong> daily
-            survey batch for every worker.
+            Add workers with their personal task settings, then
+            <strong>Generate Today</strong> to give every worker their own batch.
           </p>
 
           <div class="stats-grid">
@@ -59,8 +59,8 @@
         <section class="card panel">
           <h2 class="section-title">Add worker user</h2>
           <p class="muted" style="margin-top: 0">
-            New accounts are saved to the local users file and can log in
-            immediately.
+            New accounts can log in immediately. Pick each worker's task mode
+            and how many tasks they get per day.
           </p>
 
           <div class="form-grid">
@@ -93,6 +93,25 @@
             </div>
           </div>
 
+          <fieldset class="task-assign">
+            <legend class="section-title" style="margin: 0">Task type for this worker</legend>
+            <div class="chip-row" id="newUserTaskTypes">
+              <button class="chip active" type="button" data-mode="survey">
+                Surveys
+              </button>
+              <button class="chip" type="button" data-mode="form">
+                Form Fill
+              </button>
+              <button class="chip" type="button" data-mode="mix">
+                Mix
+              </button>
+            </div>
+            <p class="muted" style="margin: 6px 0 0; font-size: 0.85rem">
+              Pick one or more types this worker can get (tap to toggle). Counts
+              are set later in <strong>Generate Today</strong>.
+            </p>
+          </fieldset>
+
           <div class="btn-row">
             <button id="addUserBtn" class="btn btn-primary" type="button">
               Add User
@@ -108,14 +127,16 @@
                 <tr>
                   <th>User ID</th>
                   <th>Name</th>
-                  <th>Role</th>
+                  <th>Mode</th>
                   <th>Today</th>
                   <th>Days done</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="usersTableBody">
                 <tr>
-                  <td colspan="5" class="muted">Loading…</td>
+                  <td colspan="7" class="muted">Loading…</td>
                 </tr>
               </tbody>
             </table>
@@ -123,27 +144,70 @@
         </section>
 
         <section class="card panel">
-          <h2 class="section-title">Update daily surveys</h2>
+          <h2 class="section-title">Generate today's batch</h2>
           <p class="muted" style="margin-top: 0">
-            Sets today’s work for <strong>all workers</strong>. Generating again
-            replaces today’s batch (previous progress for that day is archived).
+            Pick a task type and a count. <strong>Only workers whose personal
+            type matches</strong> will get a batch. Generating again replaces
+            today's batch (previous progress is archived).
           </p>
 
-          <div class="chip-row" id="quickCounts">
-            <button class="chip" type="button" data-count="40">40</button>
-            <button class="chip active" type="button" data-count="50">50</button>
-            <button class="chip" type="button" data-count="100">100</button>
+          <div class="chip-row" id="taskTypes">
+            <button class="chip active" type="button" data-type="survey">
+              Surveys
+            </button>
+            <button class="chip" type="button" data-type="form">
+              Form Fill
+            </button>
+            <button class="chip" type="button" data-type="mix">
+              Mix
+            </button>
           </div>
 
-          <div class="form-group" style="max-width: 220px">
-            <label for="countInput">Surveys per worker today</label>
-            <input
-              id="countInput"
-              type="number"
-              min="1"
-              max="500"
-              value="50"
-            />
+          <div id="singleInputs">
+            <div class="chip-row" id="quickCounts">
+              <button class="chip" type="button" data-count="40">40</button>
+              <button class="chip active" type="button" data-count="50">50</button>
+              <button class="chip" type="button" data-count="100">100</button>
+            </div>
+
+            <div class="form-group" style="max-width: 220px">
+              <label for="countInput" id="countLabel">Surveys per worker today</label>
+              <input
+                id="countInput"
+                type="number"
+                min="1"
+                max="500"
+                value="50"
+              />
+            </div>
+          </div>
+
+          <div id="mixInputs" class="hidden">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="surveyCountInput">Surveys per worker</label>
+                <input
+                  id="surveyCountInput"
+                  type="number"
+                  min="0"
+                  max="500"
+                  value="20"
+                />
+              </div>
+              <div class="form-group">
+                <label for="formCountInput">Forms per worker</label>
+                <input
+                  id="formCountInput"
+                  type="number"
+                  min="0"
+                  max="500"
+                  value="10"
+                />
+              </div>
+            </div>
+            <div class="muted" id="mixTotal" style="margin-bottom: 8px">
+              Total: 30 / matching worker
+            </div>
           </div>
 
           <div class="btn-row">
@@ -153,10 +217,79 @@
             <button id="refreshBtn" class="btn btn-secondary" type="button">
               Refresh
             </button>
+            <button id="masterResetBtn" class="btn btn-danger" type="button">
+              Reset all work (today)
+            </button>
           </div>
+          <p class="muted" style="margin: 8px 0 0; font-size: 0.85rem">
+            <strong>Reset all work</strong> clears every worker's queue for today
+            (their count goes back to zero). This cannot be undone.
+          </p>
         </section>
       </div>
     </div>
+
+    <!-- Edit user modal -->
+    <div id="editModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="section-title" id="editModalTitle">Edit Worker</h2>
+          <button id="editModalClose" class="btn btn-ghost" type="button">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="muted" id="editModalUser" style="margin-bottom: 12px"></div>
+
+          <fieldset class="task-assign">
+            <legend class="section-title" style="margin: 0">Task type</legend>
+            <div class="chip-row" id="editUserTaskTypes">
+              <button class="chip" type="button" data-mode="survey">Surveys</button>
+              <button class="chip" type="button" data-mode="form">Form Fill</button>
+              <button class="chip" type="button" data-mode="mix">Mix</button>
+            </div>
+            <p class="muted" style="margin: 6px 0 0; font-size: 0.85rem">
+              Tap to select one or more. A worker with several types gets a
+              batch whenever the admin generates any of those types.
+            </p>
+          </fieldset>
+
+          <fieldset class="task-assign" id="editFormsFieldset" style="margin-top: 12px">
+            <legend class="section-title" style="margin: 0">
+              Which forms this worker gets
+            </legend>
+            <p class="muted" style="margin: 6px 0 8px; font-size: 0.85rem">
+              Tick specific forms to restrict this worker to them. Leave all
+              unticked to allow every form. Only applies to Form Fill / Mix.
+            </p>
+            <div class="btn-row" style="margin-bottom: 8px">
+              <button id="editFormsSelectAll" class="btn btn-secondary" type="button">
+                Select all
+              </button>
+              <button id="editFormsClear" class="btn btn-secondary" type="button">
+                Clear (allow all)
+              </button>
+            </div>
+            <div
+              id="editFormsList"
+              style="max-height: 240px; overflow-y: auto; display: grid; gap: 6px"
+            >
+              <div class="muted">Loading forms…</div>
+            </div>
+          </fieldset>
+
+          <div id="editModalMessage" class="alert alert-info hidden"></div>
+          <div id="editModalError" class="alert alert-error hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="editModalCancel" class="btn btn-secondary" type="button">
+            Cancel
+          </button>
+          <button id="editModalSave" class="btn btn-primary" type="button">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/admin.js"></script>
   </body>
 </html>

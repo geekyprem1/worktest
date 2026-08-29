@@ -12,6 +12,9 @@ Full steps: **[SETUP-VERCEL.md](./SETUP-VERCEL.md)**
 3. `npm install` → `npm run seed:supabase`
 4. Push to GitHub → import on Vercel → add same env vars → Deploy
 
+> **Existing setup?** Form Fill feature ke liye Supabase SQL Editor me
+> `supabase/migration-form-tasks.sql` run karo, phir `npm run seed:supabase`.
+
 ## Local run (with Supabase)
 
 ```bash
@@ -32,14 +35,16 @@ Open **http://localhost:3000**
 
 ## How it works
 
-1. **Admin** → add workers → **Generate / Update Today**
+1. **Admin** → add workers → pick task type (**Surveys** ya **Form Fill**) → **Generate / Update Today**
 2. Daily batch for every worker
-3. **Worker** → Start Work → one-by-one surveys + 1 min cooldown
+3. **Worker** → Start Work → one-by-one tasks + 1 min cooldown
+   - **Surveys**: MCQ — ek option choose karo
+   - **Form Fill**: dummy application form — fields bhar ke submit karo
 4. Dashboard shows completed dates
 
 ## Project layout
 
 - `server.js` / `api/index.js` — Express API (Vercel serverless)
-- `lib/` — Supabase DB + JWT auth
-- `supabase/schema.sql` — database tables
+- `lib/` — Supabase DB + JWT auth + template generators (surveys & forms)
+- `supabase/schema.sql` — database tables (`migration-form-tasks.sql` for existing DBs)
 - `public/` — login, worker, admin UI

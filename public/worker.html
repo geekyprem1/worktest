@@ -23,8 +23,8 @@
         <section id="dashboardView" class="card">
           <h1 class="welcome">Welcome, <span id="workerName">…</span></h1>
           <p class="muted">
-            Complete today’s surveys one by one. After each submit there is a
-            1-minute wait before the next survey.
+            Complete today’s work one by one — surveys or form fill. After
+            each submit there is a 1-minute wait before the next task.
           </p>
 
           <div class="stats-grid">
@@ -49,8 +49,24 @@
           <div id="dashMessage" class="alert alert-info hidden"></div>
 
           <div class="btn-row">
-            <button id="startWorkBtn" class="btn btn-primary" type="button">
+            <button id="startWorkBtn" class="btn btn-primary hidden" type="button">
               Start Work
+            </button>
+            <button
+              id="startSurveysBtn"
+              class="btn btn-primary hidden"
+              type="button"
+              data-type="survey"
+            >
+              Start Surveys (<span id="startSurveysCount">0</span>)
+            </button>
+            <button
+              id="startFormsBtn"
+              class="btn btn-secondary hidden"
+              type="button"
+              data-type="form"
+            >
+              Start Forms (<span id="startFormsCount">0</span>)
             </button>
             <button id="refreshBtn" class="btn btn-secondary" type="button">
               Refresh Status
@@ -89,7 +105,7 @@
           <div class="topbar" style="margin-bottom: 8px">
             <div>
               <div class="section-title" style="margin: 0">
-                Survey Work · <span id="workDateLabel">—</span>
+                Daily Work · <span id="workDateLabel">—</span>
               </div>
               <div class="muted" id="progressText">0 / 0 completed</div>
             </div>
@@ -106,7 +122,7 @@
 
           <!-- Cooldown -->
           <div id="cooldownPanel" class="cooldown-box hidden">
-            <div class="muted">Next survey unlocks in</div>
+            <div class="muted">Next task unlocks in</div>
             <div class="cooldown-timer" id="cooldownTimer">1:00</div>
             <p class="muted">Please wait. The timer is enforced by the server.</p>
           </div>
@@ -120,10 +136,20 @@
             </button>
           </div>
 
+          <!-- Form fill -->
+          <div id="formPanel" class="hidden">
+            <div class="survey-question" id="formTitle">Form</div>
+            <p class="muted" id="formDescription" style="margin-top: -8px"></p>
+            <div class="form-grid" id="formFields"></div>
+            <button id="formSubmitBtn" class="btn btn-primary" type="button" disabled>
+              Submit Form
+            </button>
+          </div>
+
           <!-- All done -->
           <div id="donePanel" class="cooldown-box hidden">
             <div class="alert alert-ok" style="display: inline-block">
-              All surveys complete for this date. Great work!
+              All work complete for this date. Great work!
             </div>
             <div style="margin-top: 16px">
               <button id="doneBackBtn" class="btn btn-primary" type="button">

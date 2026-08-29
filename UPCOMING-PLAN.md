@@ -65,7 +65,7 @@ In sab ko practically **template bank** jaisa treat kiya ja sakta hai — field:
 | **Data entry** | Name, city, phone fields | Text inputs + validation |
 | **Typing task** | Paragraph type karo | Accuracy / WPM check |
 | **Copy-check** | Do texts same hain? | Side-by-side compare |
-| **Form fill** | Dummy application form | Multi-field form |
+| **Form fill** ✅ (live) | Dummy application form | Multi-field form |
 | **Reply draft (MCQ)** | Customer msg → best reply choose | Long text + 4 replies |
 
 ### 2.3 Heavier (baad me phase)

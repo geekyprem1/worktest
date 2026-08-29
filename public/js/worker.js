@@ -2,6 +2,8 @@ const letters = ["A", "B", "C", "D"];
 
 let currentQueueId = null;
 let selectedOption = null;
+let currentTaskType = "survey";
+let currentFormFields = [];
 let cooldownInterval = null;
 let pollInterval = null;
 
@@ -144,6 +146,41 @@ function setWorkMessage(text, type = "info") {
   show(el, true);
 }
 
+function renderStartButtons(data) {
+  const surveysBtn = $("startSurveysBtn");
+  const formsBtn = $("startFormsBtn");
+  const singleBtn = $("startWorkBtn");
+  const refreshBtn = $("refreshBtn");
+
+  const total = data.total || 0;
+  const noBatch = total === 0;
+  const pendingSurvey = data.pendingSurveyCount ?? 0;
+  const pendingForm = data.pendingFormCount ?? 0;
+
+  if (noBatch) {
+    show(singleBtn, false);
+    show(surveysBtn, false);
+    show(formsBtn, false);
+    show(refreshBtn, true);
+    return;
+  }
+
+  if (data.workType === "mix") {
+    show(singleBtn, false);
+    $("startSurveysCount").textContent = pendingSurvey;
+    $("startFormsCount").textContent = pendingForm;
+    show(surveysBtn, true);
+    show(formsBtn, true);
+    surveysBtn.disabled = pendingSurvey === 0;
+    formsBtn.disabled = pendingForm === 0;
+  } else {
+    show(surveysBtn, false);
+    show(formsBtn, false);
+    show(singleBtn, true);
+    singleBtn.disabled = data.pending === 0;
+  }
+}
+
 function clearTimers() {
   if (cooldownInterval) {
     clearInterval(cooldownInterval);
@@ -193,12 +230,17 @@ function renderOptions(options) {
   });
 }
 
+function unitLabel(workType) {
+  return workType === "form" ? "form" : "survey";
+}
+
 function startCooldown(ms) {
   show($("surveyPanel"), false);
+  show($("formPanel"), false);
   show($("donePanel"), false);
   show($("cooldownPanel"), true);
   setWorkMessage(
-    "Answer submitted. Waiting 1 minute for the next survey…",
+    "Submitted. Waiting 1 minute for the next task…",
     "warn"
   );
 
@@ -242,38 +284,138 @@ async function refreshStatus() {
 
     if (data.total === 0) {
       setDashMessage(
-        "No surveys for today yet. Ask the admin to generate today’s daily surveys.",
+        "No work for today yet. Ask the admin to generate today’s daily batch.",
         "warn"
       );
-      $("startWorkBtn").disabled = true;
     } else if (data.pending === 0) {
       setDashMessage(
-        `All surveys complete for ${formatDay(data.workDate)}. Great job!`,
+        `All work complete for ${formatDay(data.workDate)}. Great job!`,
         "ok"
       );
-      $("startWorkBtn").disabled = false;
     } else {
-      setDashMessage(
-        `${data.pending} survey(s) left for ${formatDay(data.workDate)}. Click Start Work.`,
-        "info"
-      );
-      $("startWorkBtn").disabled = false;
+      let summary;
+      if (data.workType === "mix") {
+        summary = `${data.surveyCount} surveys + ${data.formCount} forms ready for ${formatDay(data.workDate)}`;
+      } else if (data.workType === "form") {
+        summary = `${data.pending} form(s) left for ${formatDay(data.workDate)}`;
+      } else {
+        summary = `${data.pending} survey(s) left for ${formatDay(data.workDate)}`;
+      }
+      setDashMessage(`${summary}. Click Start.`, "info");
     }
+    renderStartButtons(data);
   } catch (err) {
     setDashMessage(err.message, "error");
   }
 }
 
-async function loadCurrent() {
+function renderForm(task) {
+  currentFormFields = task.fields || [];
+  const wrap = $("formFields");
+  wrap.innerHTML = "";
+  $("formTitle").textContent = task.title || "Form";
+  $("formDescription").textContent = task.description || "";
+  $("formSubmitBtn").disabled = true;
+
+  currentFormFields.forEach((field) => {
+    const group = document.createElement("div");
+    group.className = "form-group";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", `field_${field.key}`);
+    label.textContent = field.label + (field.required ? " *" : "");
+    group.appendChild(label);
+
+    let input;
+    if (field.type === "select") {
+      input = document.createElement("select");
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "Select…";
+      input.appendChild(empty);
+      (field.options || []).forEach((opt) => {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        input.appendChild(o);
+      });
+    } else {
+      input = document.createElement("input");
+      input.type =
+        field.type === "email"
+          ? "email"
+          : field.type === "tel"
+            ? "tel"
+            : field.type === "number"
+              ? "number"
+              : field.type === "date"
+                ? "date"
+                : "text";
+      if (field.placeholder) input.placeholder = field.placeholder;
+    }
+    input.id = `field_${field.key}`;
+    input.dataset.fieldKey = field.key;
+    input.addEventListener("input", updateFormSubmitState);
+    input.addEventListener("change", updateFormSubmitState);
+    group.appendChild(input);
+    wrap.appendChild(group);
+  });
+}
+
+function updateFormSubmitState() {
+  const ok = currentFormFields.every((field) => {
+    if (!field.required) return true;
+    const input = document.getElementById(`field_${field.key}`);
+    return input && input.value.trim().length > 0;
+  });
+  $("formSubmitBtn").disabled = !ok;
+}
+
+function collectFormAnswers() {
+  const answers = {};
+  currentFormFields.forEach((field) => {
+    const input = document.getElementById(`field_${field.key}`);
+    answers[field.key] = input ? input.value.trim() : "";
+  });
+  return answers;
+}
+
+async function loadCurrent(forcedType) {
   try {
-    const data = await api("/api/worker/current");
+    let url = "/api/worker/current";
+    if (forcedType === "survey" || forcedType === "form") {
+      url += `?type=${forcedType}`;
+    }
+    const data = await api(url);
     setStats(data);
 
     if (data.done) {
       show($("surveyPanel"), false);
+      show($("formPanel"), false);
       show($("cooldownPanel"), false);
       show($("donePanel"), true);
       setWorkMessage("Day finished.", "ok");
+      return;
+    }
+
+    if (data.noTaskOfType) {
+      show($("surveyPanel"), false);
+      show($("formPanel"), false);
+      show($("cooldownPanel"), false);
+      const other =
+        data.requestedType === "form" ? "surveys" : "forms";
+      const otherPending =
+        data.requestedType === "form"
+          ? data.pendingSurveyCount
+          : data.pendingFormCount;
+      setWorkMessage(
+        `No more ${data.requestedType} tasks left.${
+          otherPending > 0
+            ? ` Switch to ${other} from dashboard.`
+            : " All work complete!"
+        }`,
+        "info"
+      );
       return;
     }
 
@@ -284,20 +426,30 @@ async function loadCurrent() {
 
     show($("cooldownPanel"), false);
     show($("donePanel"), false);
-    show($("surveyPanel"), true);
     setWorkMessage("", "info");
 
-    currentQueueId = data.survey.queueId;
-    $("surveyQuestion").textContent = data.survey.question;
-    renderOptions(data.survey.options);
+    currentQueueId = data.task.queueId;
+    currentTaskType = data.task.taskType || "survey";
+
+    if (currentTaskType === "form") {
+      show($("surveyPanel"), false);
+      show($("formPanel"), true);
+      renderForm(data.task);
+    } else {
+      show($("formPanel"), false);
+      show($("surveyPanel"), true);
+      $("surveyQuestion").textContent = data.task.question;
+      renderOptions(data.task.options);
+    }
   } catch (err) {
     setWorkMessage(err.message, "error");
     show($("surveyPanel"), false);
+    show($("formPanel"), false);
     show($("cooldownPanel"), false);
   }
 }
 
-async function startWork() {
+async function startWork(forcedType) {
   try {
     const data = await api("/api/worker/start", { method: "POST", body: "{}" });
     setStats(data);
@@ -305,16 +457,44 @@ async function startWork() {
 
     if (data.done) {
       show($("surveyPanel"), false);
+      show($("formPanel"), false);
       show($("cooldownPanel"), false);
       show($("donePanel"), true);
       setWorkMessage(data.message || "All done.", "ok");
       return;
     }
 
-    await loadCurrent();
+    await loadCurrent(forcedType || null);
   } catch (err) {
     setDashMessage(err.message, "error");
   }
+}
+
+function handleSubmitSuccess(data) {
+  setStats(data);
+
+  if (data.allDone) {
+    show($("surveyPanel"), false);
+    show($("formPanel"), false);
+    show($("cooldownPanel"), false);
+    show($("donePanel"), true);
+    setWorkMessage(
+      `Last task submitted. ${data.workDate || "Today"} is complete!`,
+      "ok"
+    );
+    return;
+  }
+
+  startCooldown(data.cooldownMs || 60000);
+}
+
+function handleSubmitError(err, reEnable) {
+  if (err.status === 429 && err.data && err.data.cooldownMs) {
+    startCooldown(err.data.cooldownMs);
+    return;
+  }
+  setWorkMessage(err.message, "error");
+  reEnable();
 }
 
 async function submitAnswer() {
@@ -329,28 +509,31 @@ async function submitAnswer() {
         selectedOption,
       }),
     });
-
-    setStats(data);
-
-    if (data.allDone) {
-      show($("surveyPanel"), false);
-      show($("cooldownPanel"), false);
-      show($("donePanel"), true);
-      setWorkMessage(
-        `Last survey submitted. ${data.workDate || "Today"} is complete!`,
-        "ok"
-      );
-      return;
-    }
-
-    startCooldown(data.cooldownMs || 60000);
+    handleSubmitSuccess(data);
   } catch (err) {
-    if (err.status === 429 && err.data && err.data.cooldownMs) {
-      startCooldown(err.data.cooldownMs);
-      return;
-    }
-    setWorkMessage(err.message, "error");
-    $("submitBtn").disabled = false;
+    handleSubmitError(err, () => {
+      $("submitBtn").disabled = false;
+    });
+  }
+}
+
+async function submitForm() {
+  if (currentQueueId == null) return;
+
+  $("formSubmitBtn").disabled = true;
+  try {
+    const data = await api("/api/worker/submit", {
+      method: "POST",
+      body: JSON.stringify({
+        queueId: currentQueueId,
+        answers: collectFormAnswers(),
+      }),
+    });
+    handleSubmitSuccess(data);
+  } catch (err) {
+    handleSubmitError(err, () => {
+      $("formSubmitBtn").disabled = false;
+    });
   }
 }
 
@@ -365,10 +548,17 @@ async function logout() {
 
 $("logoutBtn").addEventListener("click", logout);
 $("refreshBtn").addEventListener("click", refreshStatus);
-$("startWorkBtn").addEventListener("click", startWork);
+$("startWorkBtn").addEventListener("click", () => startWork());
+$("startSurveysBtn").addEventListener("click", (e) =>
+  startWork(e.currentTarget.dataset.type)
+);
+$("startFormsBtn").addEventListener("click", (e) =>
+  startWork(e.currentTarget.dataset.type)
+);
 $("backDashBtn").addEventListener("click", showDashboard);
 $("doneBackBtn").addEventListener("click", showDashboard);
 $("submitBtn").addEventListener("click", submitAnswer);
+$("formSubmitBtn").addEventListener("click", submitForm);
 
 (async function init() {
   const user = await ensureWorker();
