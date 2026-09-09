@@ -66,7 +66,7 @@
               यहाँ ऑडियो अपलोड करें
             </h1>
             <p class="muted" style="margin: 0; font-size: 0.98rem;">
-              अपनी रिकॉर्ड की हुई ऑडियो (Voice Recording / Story) फाइल चुनें और सबमिट करें। (MP3, M4A, WAV, AAC — <strong>अधिकतम साइज: 4.5 MB</strong>)
+              अपनी रिकॉर्ड की हुई ऑडियो (Voice Recording / Story) फाइल चुनें और सबमिट करें। (MP3, M4A, WAV, AAC — <strong>अधिकतम साइज: 50 MB</strong>)
             </p>
           </div>
 
@@ -89,7 +89,7 @@
                 ऑडियो फाइल चुनें या यहाँ ड्रैग करें
               </div>
               <div class="muted" style="font-size: 0.88rem;">
-                Click here to browse your phone / computer (MP3, M4A, WAV)
+                Click here to browse your phone / computer (MP3, M4A, WAV — Up to 50 MB)
               </div>
               <input
                 type="file"
@@ -115,6 +115,17 @@
 
             <div id="uploadAlertOk" class="alert alert-ok hidden" style="margin-bottom: 16px;"></div>
             <div id="uploadAlertError" class="alert alert-error hidden" style="margin-bottom: 16px;"></div>
+
+            <!-- Upload Progress Bar -->
+            <div id="uploadProgressWrap" class="hidden" style="margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 600; margin-bottom: 8px; color: var(--ink);">
+                <span id="progressStatusText">फाइल अपलोड हो रही है...</span>
+                <span id="progressPercent" style="color: var(--brand); font-weight: 800;">0%</span>
+              </div>
+              <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                <div id="progressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--brand), #6366f1); border-radius: 999px; transition: width 0.15s ease;"></div>
+              </div>
+            </div>
 
             <button id="uploadSubmitBtn" type="submit" class="btn btn-primary btn-block" style="padding: 14px; font-size: 1.1rem; font-weight: 700;">
               ⬆️ ऑडियो अपलोड करें (Upload Recording)

@@ -13,7 +13,7 @@ const {
   setAuthCookie,
   clearAuthCookie,
 } = require("./lib/auth");
-const { isSupabaseConfigured } = require("./lib/supabase");
+const { getSupabase, isSupabaseConfigured } = require("./lib/supabase");
 const db = require("./lib/db");
 
 const app = express();
@@ -884,6 +884,66 @@ app.delete(
 );
 
 // ---------- Worker Story Work (Audio Uploads) ----------
+app.post(
+  "/api/worker/audio-upload-url",
+  requireRole("worker"),
+  asyncHandler(async (req, res) => {
+    const { fileName, mimeType, fileSize } = req.body || {};
+    if (!fileName) {
+      return res.status(400).json({ error: "fileName required" });
+    }
+
+    const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
+    if (fileSize && Number(fileSize) > MAX_SIZE) {
+      return res.status(400).json({
+        error: "फाइल का साइज 50 MB से अधिक नहीं हो सकता।",
+      });
+    }
+
+    if (!isSupabaseConfigured()) {
+      return res.json({ ok: true, useSignedUrl: false, useDirectUpload: true });
+    }
+
+    try {
+      const sb = getSupabase();
+      const ext = path.extname(fileName) || ".mp3";
+      const sanitizedName =
+        path
+          .basename(fileName, ext)
+          .replace(/[^a-zA-Z0-9_-]/g, "_")
+          .slice(0, 40) || "recording";
+      const uniquePath = `recordings/${req.user.userId}/${Date.now()}_${sanitizedName}${ext}`;
+
+      const { data, error } = await sb.storage
+        .from("worker-recordings")
+        .createSignedUploadUrl(uniquePath);
+
+      if (error || !data || !data.signedUrl) {
+        console.warn(
+          "Signed upload URL warning:",
+          error ? error.message : "No URL returned"
+        );
+        return res.json({ ok: true, useSignedUrl: false, useDirectUpload: true });
+      }
+
+      const { data: pubData } = sb.storage
+        .from("worker-recordings")
+        .getPublicUrl(uniquePath);
+
+      res.json({
+        ok: true,
+        useSignedUrl: true,
+        signedUrl: data.signedUrl,
+        publicUrl: pubData ? pubData.publicUrl : "",
+        filePath: uniquePath,
+      });
+    } catch (err) {
+      console.warn("Signed upload URL error:", err.message);
+      res.json({ ok: true, useSignedUrl: false, useDirectUpload: true });
+    }
+  })
+);
+
 app.post(
   "/api/worker/upload-audio",
   requireRole("worker"),

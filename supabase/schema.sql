@@ -120,3 +120,8 @@ alter table completions disable row level security;
 alter table site_notices disable row level security;
 alter table worker_responses disable row level security;
 alter table worker_audios disable row level security;
+
+-- Storage Bucket for audio uploads up to 50MB
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('worker-recordings', 'worker-recordings', true, 52428800)
+on conflict (id) do update set file_size_limit = 52428800, public = true;

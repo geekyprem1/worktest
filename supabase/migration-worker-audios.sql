@@ -17,3 +17,8 @@ create index if not exists idx_worker_audios_user on worker_audios (user_id);
 create index if not exists idx_worker_audios_date on worker_audios (created_at desc);
 
 alter table worker_audios disable row level security;
+
+-- Storage Bucket for audio uploads up to 50MB
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('worker-recordings', 'worker-recordings', true, 52428800)
+on conflict (id) do update set file_size_limit = 52428800, public = true;

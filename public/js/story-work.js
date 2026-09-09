@@ -44,12 +44,12 @@ async function checkAuth() {
 function handleFilePicked(file) {
   if (!file) return;
 
-  const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB (Vercel payload safe limit)
+  const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
   const errEl = $("uploadAlertError");
   show(errEl, false);
 
   if (file.size > MAX_SIZE) {
-    errEl.textContent = `फाइल का साइज बहुत बड़ा है (${formatBytes(file.size)})। कृपया 4.5 MB से कम साइज की ऑडियो फाइल चुनें।`;
+    errEl.textContent = `फाइल का साइज बहुत बड़ा है (${formatBytes(file.size)})। कृपया 50 MB से कम साइज की ऑडियो फाइल चुनें।`;
     show(errEl, true);
     $("audioFileInput").value = "";
     return;
@@ -97,6 +97,10 @@ async function handleUpload(e) {
   const okEl = $("uploadAlertOk");
   const errEl = $("uploadAlertError");
   const submitBtn = $("uploadSubmitBtn");
+  const progressWrap = $("uploadProgressWrap");
+  const progressBar = $("progressBarFill");
+  const progressPercent = $("progressPercent");
+  const progressStatus = $("progressStatusText");
 
   show(okEl, false);
   show(errEl, false);
@@ -108,12 +112,81 @@ async function handleUpload(e) {
   }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = "अपलोड हो रहा है… कृपया प्रतीक्षा करें";
+  submitBtn.textContent = "अपलोड की तैयारी हो रही है…";
+  show(progressWrap, true);
+  if (progressBar) progressBar.style.width = "0%";
+  if (progressPercent) progressPercent.textContent = "0%";
+  if (progressStatus) progressStatus.textContent = "कनेक्ट हो रहा है...";
 
   try {
-    const base64Data = await fileToBase64(selectedFile);
     const title = $("storyTitle").value.trim();
 
+    // 1. Request secure signed upload URL from backend
+    const urlRes = await fetch("/api/worker/audio-upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: selectedFile.name,
+        mimeType: selectedFile.type || "audio/mpeg",
+        fileSize: selectedFile.size,
+      }),
+    });
+
+    const urlData = await urlRes.json().catch(() => ({}));
+    if (!urlRes.ok) {
+      throw new Error(urlData.error || "अपलोड टोकन प्राप्त करने में त्रुटि हुई।");
+    }
+
+    let finalFileData = "";
+
+    if (urlData.useSignedUrl && urlData.signedUrl) {
+      // 2. Direct upload to Supabase Storage (bypasses Vercel 4.5MB limit, allows up to 50MB)
+      if (progressStatus) progressStatus.textContent = `ऑडियो अपलोड हो रहा है (${formatBytes(selectedFile.size)})...`;
+
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", urlData.signedUrl, true);
+        xhr.setRequestHeader("Content-Type", selectedFile.type || "audio/mpeg");
+
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            const pct = Math.min(100, Math.round((evt.loaded / evt.total) * 100));
+            if (progressBar) progressBar.style.width = pct + "%";
+            if (progressPercent) progressPercent.textContent = pct + "%";
+            if (progressStatus) {
+              progressStatus.textContent = `अपलोड हो रहा है: ${formatBytes(evt.loaded)} / ${formatBytes(evt.total)} (${pct}%)`;
+            }
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                "स्टोरेज में अपलोड विफल रहा (Status: " + xhr.status + ")। कृपया दोबारा प्रयास करें।"
+              )
+            );
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("इंटरनेट नेटवर्क त्रुटि: फाइल पूरी तरह अपलोड नहीं हो पाई।"));
+        };
+
+        xhr.send(selectedFile);
+      });
+
+      finalFileData = urlData.publicUrl;
+      if (progressStatus) progressStatus.textContent = "रिकॉर्ड सुरक्षित किया जा रहा है...";
+    } else {
+      // Fallback if Supabase is not configured (e.g. offline dev)
+      if (progressStatus) progressStatus.textContent = "फाइल प्रोसेस हो रही है...";
+      finalFileData = await fileToBase64(selectedFile);
+    }
+
+    // 3. Save audio record in database
     const res = await fetch("/api/worker/upload-audio", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,16 +195,18 @@ async function handleUpload(e) {
         fileName: selectedFile.name,
         mimeType: selectedFile.type || "audio/mpeg",
         fileSize: selectedFile.size,
-        fileData: base64Data,
+        fileData: finalFileData,
       }),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || "अपलोड करने में त्रुटि हुई।");
+      throw new Error(data.error || "ऑडियो विवरण सेव करने में त्रुटि हुई।");
     }
 
-    okEl.textContent = "आपकी ऑडियो फाइल सफलतापूर्वक अपलोड हो गई है!";
+    if (progressBar) progressBar.style.width = "100%";
+    if (progressPercent) progressPercent.textContent = "100%";
+    okEl.textContent = "आपकी ऑडियो फाइल (50 MB तक) सफलतापूर्वक अपलोड हो गई है!";
     show(okEl, true);
 
     $("storyTitle").value = "";
@@ -143,6 +218,9 @@ async function handleUpload(e) {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "⬆️ ऑडियो अपलोड करें (Upload Recording)";
+    setTimeout(() => {
+      show(progressWrap, false);
+    }, 2500);
   }
 }
 
