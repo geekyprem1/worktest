@@ -340,6 +340,67 @@
             </a>
           </div>
         </section>
+
+        <!-- Worker Responses / Agreement Panel -->
+        <section class="card panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 class="section-title" style="margin-bottom: 4px;">Worker Responses (सहमति व जवाब)</h2>
+              <p class="muted" style="margin: 0; font-size: 0.9rem;">
+                Question: <em>"क्या आप ये काम करना चाहते हैं? हाँ या ना लिखें"</em> — Workers ke submit kiye gaye jawab yahan real-time dikhenge.
+              </p>
+            </div>
+            <div class="btn-row" style="margin: 0;">
+              <a href="/response.html" target="_blank" class="btn btn-secondary" style="font-size: 0.88rem;">
+                Open Response Form ↗
+              </a>
+              <button id="refreshResponsesBtn" class="btn btn-secondary" type="button" style="font-size: 0.88rem;">
+                Refresh Responses
+              </button>
+            </div>
+          </div>
+
+          <div class="stats-grid" style="margin-top: 16px;">
+            <div class="stat">
+              <span class="stat-label">Total Responses</span>
+              <span class="stat-value" id="statRespTotal">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">हाँ (Yes)</span>
+              <span class="stat-value" id="statRespYes" style="color: var(--ok);">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">ना (No)</span>
+              <span class="stat-value" id="statRespNo" style="color: var(--danger);">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Other/Custom</span>
+              <span class="stat-value" id="statRespOther">0</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="table-wrap">
+            <table class="data-table" id="responsesTable">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Choice</th>
+                  <th>Response / Remarks</th>
+                  <th>Submitted At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="responsesTableBody">
+                <tr>
+                  <td colspan="6" class="muted">Loading responses…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
 

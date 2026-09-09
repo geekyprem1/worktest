@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="hi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BS Tech Limited — कार्य सहमति</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="shell">
+        <div class="topbar">
+          <div class="brand">
+            <div class="brand-mark">BS</div>
+            <div>BS Tech Limited</div>
+          </div>
+          <a href="/worker.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span>←</span> Back to Dashboard
+          </a>
+        </div>
+
+        <section class="card" style="max-width: 680px; margin: 0 auto; padding: 32px 24px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="display: inline-block; padding: 4px 14px; background: var(--brand-soft); color: var(--brand-dark); font-size: 0.85rem; font-weight: 700; border-radius: 20px; margin-bottom: 12px;">
+              Worker Feedback & Confirmation
+            </span>
+            <h1 style="font-size: clamp(1.4rem, 4vw, 1.85rem); font-weight: 800; letter-spacing: -0.025em; margin: 0 0 10px; color: var(--ink);">
+              क्या आप ये काम करना चाहते हैं?
+            </h1>
+            <p class="muted" style="margin: 0; font-size: 1rem;">
+              कृपया नीचे अपना जवाब <strong>हाँ</strong> या <strong>ना</strong> लिखकर या चुनकर सबमिट करें।
+            </p>
+          </div>
+
+          <!-- Existing submission status if any -->
+          <div id="prevStatusBox" class="alert alert-ok hidden" style="margin-bottom: 20px;">
+            <strong>आपका जवाब दर्ज है:</strong>
+            <span id="prevAnswerText" style="font-weight: 700; margin-left: 4px;"></span>
+            <div class="muted" id="prevAnswerTime" style="font-size: 0.82rem; margin-top: 4px;"></div>
+          </div>
+
+          <!-- Quick Choice Buttons -->
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 0.92rem; font-weight: 600; margin-bottom: 8px;">
+              त्वरित चुनाव (Quick Select):
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <button id="choiceYesBtn" type="button" class="btn btn-secondary" style="padding: 14px; font-size: 1.05rem; font-weight: 700; border: 2px solid var(--line); border-radius: 12px;">
+                👍 हाँ (Yes)
+              </button>
+              <button id="choiceNoBtn" type="button" class="btn btn-secondary" style="padding: 14px; font-size: 1.05rem; font-weight: 700; border: 2px solid var(--line); border-radius: 12px;">
+                👎 ना (No)
+              </button>
+            </div>
+          </div>
+
+          <!-- Response Form -->
+          <form id="responseForm">
+            <div class="form-group">
+              <label for="responseText">
+                आपका जवाब / टिप्पणी (Write here):
+              </label>
+              <textarea
+                id="responseText"
+                name="responseText"
+                rows="4"
+                required
+                style="width: 100%; padding: 14px; font-family: inherit; font-size: 1rem; border: 2px solid var(--line); border-radius: 12px; resize: vertical;"
+                placeholder="यहाँ लिखें: हाँ / ना या कोई अन्य बात..."
+              ></textarea>
+            </div>
+
+            <div id="submitMessage" class="alert alert-ok hidden" style="margin-bottom: 16px;"></div>
+            <div id="submitError" class="alert alert-error hidden" style="margin-bottom: 16px;"></div>
+
+            <button id="submitResponseBtn" type="submit" class="btn btn-primary btn-block" style="padding: 14px; font-size: 1.1rem; font-weight: 700;">
+              जवाब सबमिट करें (Save Response)
+            </button>
+          </form>
+
+          <div class="divider" style="margin: 28px 0 18px;"></div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <a href="/notice.html" class="btn btn-ghost" style="padding: 6px 12px; font-size: 0.88rem;">
+              ← Back to Offer Notice
+            </a>
+            <a href="/worker.html" class="btn btn-ghost" style="padding: 6px 12px; font-size: 0.88rem;">
+              Go to Dashboard →
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="/js/response.js"></script>
+  </body>
+</html>

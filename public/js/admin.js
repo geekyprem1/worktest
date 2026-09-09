@@ -678,6 +678,86 @@ if ($("saveNoticeBtn")) {
   $("saveNoticeBtn").addEventListener("click", saveNoticeSettings);
 }
 
+async function loadWorkerResponses() {
+  const tbody = $("responsesTableBody");
+  if (!tbody) return;
+
+  try {
+    const data = await api("/api/admin/responses");
+    const list = data.responses || [];
+
+    let yesCount = 0;
+    let noCount = 0;
+    let otherCount = 0;
+
+    list.forEach((r) => {
+      if (r.choice === "yes") yesCount++;
+      else if (r.choice === "no") noCount++;
+      else otherCount++;
+    });
+
+    if ($("statRespTotal")) $("statRespTotal").textContent = list.length;
+    if ($("statRespYes")) $("statRespYes").textContent = yesCount;
+    if ($("statRespNo")) $("statRespNo").textContent = noCount;
+    if ($("statRespOther")) $("statRespOther").textContent = otherCount;
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Abhi tak kisi worker ne response submit nahi kiya hai.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list
+      .map((r) => {
+        let badgeHtml = "";
+        if (r.choice === "yes") {
+          badgeHtml = '<span class="status-pill status-complete">हाँ (Yes)</span>';
+        } else if (r.choice === "no") {
+          badgeHtml = '<span class="status-pill" style="background: var(--danger-soft); color: var(--danger);">ना (No)</span>';
+        } else {
+          badgeHtml = '<span class="status-pill" style="background: #eee; color: #555;">Other</span>';
+        }
+
+        const dateStr = r.updatedAt || r.submittedAt ? formatDate(r.updatedAt || r.submittedAt) : "—";
+        const cleanText = (r.responseText || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        return `
+          <tr>
+            <td><strong>${r.userId}</strong></td>
+            <td>${r.name || "—"}</td>
+            <td>${badgeHtml}</td>
+            <td style="max-width: 320px; word-break: break-word;">${cleanText}</td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${dateStr}</td>
+            <td>
+              <button class="btn btn-danger btn-small" type="button" onclick="deleteResponse('${r.userId}')">
+                Delete
+              </button>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  } catch (err) {
+    console.warn("Error loading worker responses:", err);
+    tbody.innerHTML = '<tr><td colspan="6" class="muted" style="color: var(--danger);">Error loading responses.</td></tr>';
+  }
+}
+
+window.deleteResponse = async function (userId) {
+  if (!confirm(`Are you sure you want to delete the response for worker "${userId}"?`)) return;
+  try {
+    await api(`/api/admin/responses/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+    await loadWorkerResponses();
+  } catch (err) {
+    alert(err.message || "Failed to delete response.");
+  }
+};
+
+if ($("refreshResponsesBtn")) {
+  $("refreshResponsesBtn").addEventListener("click", loadWorkerResponses);
+}
+
 (async function init() {
   const user = await ensureAdmin();
   if (!user) return;
@@ -685,4 +765,5 @@ if ($("saveNoticeBtn")) {
   setTaskType("survey");
   await refreshStats();
   await loadNoticeSettings();
+  await loadWorkerResponses();
 })();

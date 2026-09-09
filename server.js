@@ -832,6 +832,57 @@ app.post(
   })
 );
 
+// ---------- Worker Question & Response ----------
+app.get(
+  "/api/worker/response",
+  requireRole("worker"),
+  asyncHandler(async (req, res) => {
+    const response = await db.getWorkerResponse(req.user.userId);
+    res.json({ ok: true, response });
+  })
+);
+
+app.post(
+  "/api/worker/response",
+  requireRole("worker"),
+  asyncHandler(async (req, res) => {
+    const { responseText, choice } = req.body || {};
+    if (!responseText || !String(responseText).trim()) {
+      return res.status(400).json({ error: "कृपया अपना जवाब दर्ज करें।" });
+    }
+    const saved = await db.saveWorkerResponse(
+      req.user.userId,
+      req.user.name,
+      responseText,
+      choice
+    );
+    res.json({
+      ok: true,
+      message: "आपका जवाब सफलतापूर्वक दर्ज कर लिया गया है।",
+      response: saved,
+    });
+  })
+);
+
+app.get(
+  "/api/admin/responses",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const responses = await db.listAllWorkerResponses();
+    res.json({ ok: true, responses });
+  })
+);
+
+app.delete(
+  "/api/admin/responses/:userId",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    await db.deleteWorkerResponse(userId);
+    res.json({ ok: true, message: "Response deleted." });
+  })
+);
+
 // ---------- Fallback ----------
 app.get("/api/*", (req, res) => {
   res.status(404).json({ error: "Not found" });
