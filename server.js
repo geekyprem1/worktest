@@ -20,8 +20,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const COOLDOWN_MS = 60 * 1000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 function requireRole(role) {
@@ -880,6 +880,88 @@ app.delete(
     const { userId } = req.params;
     await db.deleteWorkerResponse(userId);
     res.json({ ok: true, message: "Response deleted." });
+  })
+);
+
+// ---------- Worker Story Work (Audio Uploads) ----------
+app.post(
+  "/api/worker/upload-audio",
+  requireRole("worker"),
+  asyncHandler(async (req, res) => {
+    const { title, fileName, mimeType, fileSize, fileData } = req.body || {};
+    if (!fileData) {
+      return res.status(400).json({ error: "ऑडियो फाइल डेटा आवश्यक है।" });
+    }
+    const record = await db.saveAudioUpload({
+      userId: req.user.userId,
+      workerName: req.user.name,
+      title,
+      fileName,
+      mimeType,
+      fileSize,
+      fileData,
+    });
+    res.json({
+      ok: true,
+      message: "ऑडियो सफलतापूर्वक अपलोड हो गया है।",
+      audio: record,
+    });
+  })
+);
+
+app.get(
+  "/api/worker/my-audios",
+  requireRole("worker"),
+  asyncHandler(async (req, res) => {
+    const audios = await db.getWorkerAudios(req.user.userId);
+    res.json({ ok: true, audios });
+  })
+);
+
+app.get(
+  "/api/admin/audios",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const audios = await db.getAllAudios();
+    res.json({ ok: true, audios });
+  })
+);
+
+app.get(
+  "/api/audios/:id/download",
+  asyncHandler(async (req, res) => {
+    const user = getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const audio = await db.getAudioById(req.params.id);
+    if (!audio) {
+      return res.status(404).json({ error: "Audio not found" });
+    }
+    if (user.role !== "admin" && audio.userId !== user.userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const base64Match = audio.fileData.match(/^data:([^;]+);base64,(.+)$/);
+    if (base64Match) {
+      const buffer = Buffer.from(base64Match[2], "base64");
+      res.setHeader("Content-Type", audio.mimeType || "audio/mpeg");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(audio.fileName)}"`
+      );
+      return res.send(buffer);
+    }
+    res.redirect(audio.fileData);
+  })
+);
+
+app.delete(
+  "/api/admin/audios/:id",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    await db.deleteAudioUpload(req.params.id);
+    res.json({ ok: true, message: "Audio deleted." });
   })
 );
 

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="hi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BS Tech Limited — यहाँ ऑडियो अपलोड करें (Story Work)</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <style>
+      .dropzone {
+        border: 2px dashed var(--line);
+        border-radius: 14px;
+        padding: 32px 20px;
+        text-align: center;
+        background: #fdfcf9;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        margin-bottom: 18px;
+      }
+      .dropzone:hover, .dropzone.dragover {
+        border-color: var(--brand);
+        background: var(--brand-soft);
+      }
+      .dropzone-icon {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+      }
+      .audio-preview-box {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 18px;
+      }
+      .audio-item-card {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="shell">
+        <div class="topbar">
+          <div class="brand">
+            <div class="brand-mark">BS</div>
+            <div>BS Tech Limited · Story Work</div>
+          </div>
+          <a href="/worker.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span>←</span> Back to Dashboard
+          </a>
+        </div>
+
+        <!-- Upload Section -->
+        <section class="card" style="max-width: 680px; margin: 0 auto 24px; padding: 32px 24px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="display: inline-block; padding: 4px 14px; background: var(--brand-soft); color: var(--brand-dark); font-size: 0.85rem; font-weight: 700; border-radius: 20px; margin-bottom: 10px;">
+              🎙️ Story Work Audio Recording
+            </span>
+            <h1 style="font-size: clamp(1.4rem, 4vw, 1.85rem); font-weight: 800; letter-spacing: -0.025em; margin: 0 0 10px; color: var(--ink);">
+              यहाँ ऑडियो अपलोड करें
+            </h1>
+            <p class="muted" style="margin: 0; font-size: 0.98rem;">
+              अपनी रिकॉर्ड की हुई ऑडियो (Voice Recording / Story) फाइल चुनें और सबमिट करें। (MP3, M4A, WAV, AAC, OGG)
+            </p>
+          </div>
+
+          <form id="audioUploadForm">
+            <!-- Title / Note input -->
+            <div class="form-group">
+              <label for="storyTitle">कहानी का शीर्षक / नोट (Story Title / Remarks)</label>
+              <input
+                id="storyTitle"
+                type="text"
+                placeholder="e.g. Story 1 - Kahani Bhag 1 (optional)"
+                autocomplete="off"
+              />
+            </div>
+
+            <!-- File Dropzone -->
+            <div class="dropzone" id="dropzoneEl" onclick="document.getElementById('audioFileInput').click();">
+              <div class="dropzone-icon">🎙️</div>
+              <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">
+                ऑडियो फाइल चुनें या यहाँ ड्रैग करें
+              </div>
+              <div class="muted" style="font-size: 0.88rem;">
+                Click here to browse your phone / computer (MP3, M4A, WAV)
+              </div>
+              <input
+                type="file"
+                id="audioFileInput"
+                accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.weba"
+                style="display: none;"
+              />
+            </div>
+
+            <!-- Selected Audio Preview -->
+            <div id="filePreviewWrap" class="audio-preview-box hidden">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div>
+                  <strong id="previewFileName" style="word-break: break-all;"></strong>
+                  <div class="muted" id="previewFileSize" style="font-size: 0.85rem;"></div>
+                </div>
+                <button type="button" id="clearFileBtn" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.85rem;">
+                  Change
+                </button>
+              </div>
+              <audio id="previewAudioPlayer" controls style="width: 100%; margin-top: 6px;"></audio>
+            </div>
+
+            <div id="uploadAlertOk" class="alert alert-ok hidden" style="margin-bottom: 16px;"></div>
+            <div id="uploadAlertError" class="alert alert-error hidden" style="margin-bottom: 16px;"></div>
+
+            <button id="uploadSubmitBtn" type="submit" class="btn btn-primary btn-block" style="padding: 14px; font-size: 1.1rem; font-weight: 700;">
+              ⬆️ ऑडियो अपलोड करें (Upload Recording)
+            </button>
+          </form>
+        </section>
+
+        <!-- Previous Audios by Worker -->
+        <section class="card" style="max-width: 680px; margin: 0 auto; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="section-title" style="margin: 0; font-size: 1.25rem;">
+              आपकी अपलोड की गई ऑडियो (Your Audios)
+            </h2>
+            <button id="refreshMyAudiosBtn" class="btn btn-secondary btn-small" type="button">
+              Refresh
+            </button>
+          </div>
+
+          <div id="myAudiosList">
+            <div class="muted" style="text-align: center; padding: 20px;">
+              लोड हो रहा है…
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="/js/story-work.js"></script>
+  </body>
+</html>

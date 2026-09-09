@@ -401,6 +401,63 @@
             </table>
           </div>
         </section>
+
+        <!-- Worker Story Work Audio Recordings Panel -->
+        <section class="card panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 class="section-title" style="margin-bottom: 4px;">Worker Story Work (ऑडियो रिकॉर्डिंग्स)</h2>
+              <p class="muted" style="margin: 0; font-size: 0.9rem;">
+                Workers dwara upload ki gayi sabhi story audio recordings yahan sun sakte hain aur download kar sakte hain.
+              </p>
+            </div>
+            <div class="btn-row" style="margin: 0;">
+              <a href="/story-work.html" target="_blank" class="btn btn-secondary" style="font-size: 0.88rem;">
+                Open Upload Page ↗
+              </a>
+              <button id="refreshAudiosBtn" class="btn btn-secondary" type="button" style="font-size: 0.88rem;">
+                Refresh Audios
+              </button>
+            </div>
+          </div>
+
+          <div class="stats-grid" style="margin-top: 16px;">
+            <div class="stat">
+              <span class="stat-label">Total Audios</span>
+              <span class="stat-value" id="statAudiosTotal">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Total Size</span>
+              <span class="stat-value" id="statAudiosSize" style="font-size: 1.3rem;">0 MB</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Active Workers</span>
+              <span class="stat-value" id="statAudiosWorkers">0</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="table-wrap">
+            <table class="data-table" id="audiosTable">
+              <thead>
+                <tr>
+                  <th>Worker</th>
+                  <th>Title / File</th>
+                  <th>Size</th>
+                  <th style="min-width: 240px;">Listen / Player</th>
+                  <th>Date & Time</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="audiosTableBody">
+                <tr>
+                  <td colspan="6" class="muted">Loading audio recordings…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
 

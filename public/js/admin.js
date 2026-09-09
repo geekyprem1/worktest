@@ -758,6 +758,96 @@ if ($("refreshResponsesBtn")) {
   $("refreshResponsesBtn").addEventListener("click", loadWorkerResponses);
 }
 
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+async function loadWorkerAudios() {
+  const tbody = $("audiosTableBody");
+  if (!tbody) return;
+
+  try {
+    const data = await api("/api/admin/audios");
+    const list = data.audios || [];
+
+    let totalBytes = 0;
+    const workerSet = new Set();
+
+    list.forEach((a) => {
+      totalBytes += a.fileSize || 0;
+      if (a.userId) workerSet.add(a.userId);
+    });
+
+    if ($("statAudiosTotal")) $("statAudiosTotal").textContent = list.length;
+    if ($("statAudiosSize")) $("statAudiosSize").textContent = formatBytes(totalBytes);
+    if ($("statAudiosWorkers")) $("statAudiosWorkers").textContent = workerSet.size;
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Abhi tak kisi worker ne audio upload nahi kiya hai.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list
+      .map((a) => {
+        const dateStr = a.createdAt ? formatDate(a.createdAt) : "—";
+        const cleanTitle = (a.title || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const cleanFileName = (a.fileName || "audio.mp3").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        return `
+          <tr>
+            <td>
+              <strong>${a.userId}</strong>
+              <div class="muted" style="font-size: 0.82rem;">${a.workerName || "—"}</div>
+            </td>
+            <td>
+              ${cleanTitle ? `<strong>${cleanTitle}</strong><br/>` : ""}
+              <span class="muted" style="font-size: 0.85rem;">${cleanFileName}</span>
+            </td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${formatBytes(a.fileSize)}</td>
+            <td>
+              <audio src="${a.fileData}" controls style="width: 100%; max-width: 280px; height: 36px;"></audio>
+            </td>
+            <td style="font-size: 0.85rem; white-space: nowrap;">${dateStr}</td>
+            <td>
+              <div class="row-actions">
+                <a href="/api/audios/${a.id}/download" download="${encodeURIComponent(a.fileName)}" class="btn btn-secondary btn-small" style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                  ⬇️ Download
+                </a>
+                <button class="btn btn-danger btn-small" type="button" onclick="deleteAudio('${a.id}')">
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  } catch (err) {
+    console.warn("Error loading worker audios:", err);
+    tbody.innerHTML = '<tr><td colspan="6" class="muted" style="color: var(--danger);">Error loading audios.</td></tr>';
+  }
+}
+
+window.deleteAudio = async function (id) {
+  if (!confirm("Are you sure you want to delete this audio recording?")) return;
+  try {
+    await api(`/api/admin/audios/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    await loadWorkerAudios();
+  } catch (err) {
+    alert(err.message || "Failed to delete audio.");
+  }
+};
+
+if ($("refreshAudiosBtn")) {
+  $("refreshAudiosBtn").addEventListener("click", loadWorkerAudios);
+}
+
 (async function init() {
   const user = await ensureAdmin();
   if (!user) return;
@@ -766,4 +856,5 @@ if ($("refreshResponsesBtn")) {
   await refreshStats();
   await loadNoticeSettings();
   await loadWorkerResponses();
+  await loadWorkerAudios();
 })();

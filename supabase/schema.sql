@@ -87,6 +87,22 @@ create table if not exists worker_responses (
   updated_at timestamptz not null default now()
 );
 
+-- Worker story work audio uploads
+create table if not exists worker_audios (
+  id text primary key,
+  user_id text not null references users(user_id) on delete cascade,
+  worker_name text not null,
+  title text default '',
+  file_name text not null,
+  mime_type text not null default 'audio/mpeg',
+  file_size int not null default 0,
+  file_data text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_worker_audios_user on worker_audios (user_id);
+create index if not exists idx_worker_audios_date on worker_audios (created_at desc);
+
 -- Default accounts (same as before)
 insert into users (user_id, password, name, role) values
   ('user1', 'pass123', 'Alex Worker', 'worker'),
@@ -103,3 +119,4 @@ alter table daily_work disable row level security;
 alter table completions disable row level security;
 alter table site_notices disable row level security;
 alter table worker_responses disable row level security;
+alter table worker_audios disable row level security;
