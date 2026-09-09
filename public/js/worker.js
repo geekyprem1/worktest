@@ -560,8 +560,31 @@ $("doneBackBtn").addEventListener("click", showDashboard);
 $("submitBtn").addEventListener("click", submitAnswer);
 $("formSubmitBtn").addEventListener("click", submitForm);
 
+async function loadPromoBanner() {
+  try {
+    const data = await api("/api/notice");
+    if (data && data.notice) {
+      const bannerWrap = $("promoBannerWrap");
+      const bannerImg = $("promoBannerImg");
+      if (bannerWrap) {
+        if (data.notice.bannerEnabled === false) {
+          bannerWrap.classList.add("hidden");
+        } else {
+          bannerWrap.classList.remove("hidden");
+          if (data.notice.bannerImageUrl && bannerImg) {
+            bannerImg.src = data.notice.bannerImageUrl;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Non-blocking fallback
+  }
+}
+
 (async function init() {
   const user = await ensureWorker();
   if (!user) return;
+  loadPromoBanner();
   await refreshStatus();
 })();

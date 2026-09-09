@@ -606,10 +606,83 @@ $("editModalClose").addEventListener("click", closeEditModal);
 $("editModalCancel").addEventListener("click", closeEditModal);
 $("editModalSave").addEventListener("click", saveEdit);
 
+async function loadNoticeSettings() {
+  try {
+    const data = await api("/api/notice");
+    const notice = data.notice || {};
+    if ($("noticeBannerEnabled")) $("noticeBannerEnabled").checked = notice.bannerEnabled !== false;
+    if ($("noticeBannerImageUrl")) $("noticeBannerImageUrl").value = notice.bannerImageUrl || "/img/banner.jpg";
+    if ($("noticePageTitle")) $("noticePageTitle").value = notice.title || "";
+    if ($("noticePageContent")) $("noticePageContent").value = notice.content || "";
+    if ($("noticeActionText")) $("noticeActionText").value = notice.actionText || "";
+    if ($("noticeActionUrl")) $("noticeActionUrl").value = notice.actionUrl || "";
+    if ($("noticeVideoUrl")) $("noticeVideoUrl").value = notice.videoUrl || "";
+    if ($("noticeExtraImages")) {
+      $("noticeExtraImages").value = Array.isArray(notice.extraImages)
+        ? notice.extraImages.join("\n")
+        : "";
+    }
+  } catch (err) {
+    console.warn("Could not load notice settings:", err);
+  }
+}
+
+async function saveNoticeSettings() {
+  const saveBtn = $("saveNoticeBtn");
+  const msgEl = $("noticeSaveMessage");
+  const errEl = $("noticeSaveError");
+  show(msgEl, false);
+  show(errEl, false);
+  saveBtn.disabled = true;
+
+  try {
+    const bannerEnabled = $("noticeBannerEnabled").checked;
+    const bannerImageUrl = $("noticeBannerImageUrl").value.trim();
+    const title = $("noticePageTitle").value.trim();
+    const content = $("noticePageContent").value;
+    const actionText = $("noticeActionText").value.trim();
+    const actionUrl = $("noticeActionUrl").value.trim();
+    const videoUrl = $("noticeVideoUrl").value.trim();
+    const rawImages = $("noticeExtraImages").value;
+    const extraImages = rawImages
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const res = await api("/api/admin/notice", {
+      method: "POST",
+      body: JSON.stringify({
+        bannerEnabled,
+        bannerImageUrl,
+        title,
+        content,
+        actionText,
+        actionUrl,
+        videoUrl,
+        extraImages,
+      }),
+    });
+
+    msgEl.textContent = res.message || "Settings saved successfully.";
+    show(msgEl, true);
+    setTimeout(() => show(msgEl, false), 4000);
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save settings.";
+    show(errEl, true);
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+if ($("saveNoticeBtn")) {
+  $("saveNoticeBtn").addEventListener("click", saveNoticeSettings);
+}
+
 (async function init() {
   const user = await ensureAdmin();
   if (!user) return;
   setNewUserModes(["survey"]);
   setTaskType("survey");
   await refreshStats();
+  await loadNoticeSettings();
 })();

@@ -810,6 +810,28 @@ app.post(
   })
 );
 
+// ---------- Site Notice & Worker Banner ----------
+app.get(
+  "/api/notice",
+  asyncHandler(async (req, res) => {
+    const notice = await db.getSiteNotice();
+    res.json({ ok: true, notice });
+  })
+);
+
+app.post(
+  "/api/admin/notice",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const updated = await db.saveSiteNotice(req.body || {});
+    res.json({
+      ok: true,
+      message: "Banner and notice settings saved successfully.",
+      notice: updated,
+    });
+  })
+);
+
 // ---------- Fallback ----------
 app.get("/api/*", (req, res) => {
   res.status(404).json({ error: "Not found" });

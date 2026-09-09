@@ -63,6 +63,20 @@ create table if not exists completions (
 create index if not exists idx_daily_work_date on daily_work (work_date);
 create index if not exists idx_completions_user on completions (user_id);
 
+-- Site notices / Worker promo banner & notice page settings
+create table if not exists site_notices (
+  id text primary key default 'default',
+  banner_enabled boolean not null default true,
+  banner_image_url text default '/img/banner.jpg',
+  title text not null default 'खास आपके लिए रोज कमाए ₹3000 तक',
+  content text default 'BS Tech Limited के सभी वर्कर्स के लिए खास मौका!\n\n• घर बैठे काम करें\n• सुरक्षित और भरोसेमंद\n• कोई बड़ी इन्वेस्टमेंट नहीं\n• तुरंत पेमेंट सपोर्ट\n\nनीचे दिए गए लिंक पर क्लिक करके पूरी जानकारी प्राप्त करें और आज ही शुरू करें।',
+  action_text text default 'यहां क्लिक करें (WhatsApp / Telegram)',
+  action_url text default 'https://wa.me/',
+  video_url text default '',
+  extra_images jsonb default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 -- Default accounts (same as before)
 insert into users (user_id, password, name, role) values
   ('user1', 'pass123', 'Alex Worker', 'worker'),
@@ -77,3 +91,4 @@ alter table form_templates disable row level security;
 alter table user_task_settings disable row level security;
 alter table daily_work disable row level security;
 alter table completions disable row level security;
+alter table site_notices disable row level security;
