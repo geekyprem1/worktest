@@ -8,7 +8,7 @@ create table if not exists site_notices (
   title text not null default 'खास आपके लिए रोज कमाए ₹3000 तक',
   content text default 'BS Tech Limited के सभी वर्कर्स के लिए खास मौका!\n\n• घर बैठे काम करें\n• सुरक्षित और भरोसेमंद\n• कोई बड़ी इन्वेस्टमेंट नहीं\n• तुरंत पेमेंट सपोर्ट\n\nनीचे दिए गए लिंक पर क्लिक करके पूरी जानकारी प्राप्त करें और आज ही शुरू करें।',
   action_text text default 'यहां क्लिक करें',
-  action_url text default 'https://wa.me/',
+  action_url text default '/response.html',
   video_url text default '',
   extra_images jsonb default '[]'::jsonb,
   updated_at timestamptz not null default now()
@@ -23,7 +23,7 @@ values (
   'खास आपके लिए रोज कमाए ₹3000 तक',
   'BS Tech Limited के सभी वर्कर्स के लिए खास मौका!\n\n• घर बैठे काम करें\n• सुरक्षित और भरोसेमंद\n• कोई बड़ी इन्वेस्टमेंट नहीं\n• तुरंत पेमेंट सपोर्ट\n\nनीचे दिए गए लिंक पर क्लिक करके पूरी जानकारी प्राप्त करें और आज ही शुरू करें।',
   'यहां क्लिक करें',
-  'https://wa.me/',
+  '/response.html',
   '',
   '[]'::jsonb
 )
