@@ -43,6 +43,18 @@ async function checkAuth() {
 
 function handleFilePicked(file) {
   if (!file) return;
+
+  const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB (Vercel payload safe limit)
+  const errEl = $("uploadAlertError");
+  show(errEl, false);
+
+  if (file.size > MAX_SIZE) {
+    errEl.textContent = `फाइल का साइज बहुत बड़ा है (${formatBytes(file.size)})। कृपया 4.5 MB से कम साइज की ऑडियो फाइल चुनें।`;
+    show(errEl, true);
+    $("audioFileInput").value = "";
+    return;
+  }
+
   selectedFile = file;
 
   $("previewFileName").textContent = file.name;
