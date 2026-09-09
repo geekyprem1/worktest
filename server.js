@@ -1030,8 +1030,8 @@ app.get(
     if (!audio) {
       return res.status(404).json({ error: "Audio not found" });
     }
-    if (user.role !== "admin" && audio.userId !== user.userId) {
-      return res.status(403).json({ error: "Forbidden" });
+    if (user.role !== "admin") {
+      return res.status(403).json({ error: "Only admin can download or listen to audio recordings." });
     }
 
     const base64Match = audio.fileData.match(/^data:([^;]+);base64,(.+)$/);

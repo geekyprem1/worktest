@@ -245,17 +245,21 @@ async function loadMyAudios() {
     container.innerHTML = list
       .map(
         (a) => `
-        <div class="audio-item-card">
+        <div class="audio-item-card" style="padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px;">
             <strong style="font-size: 1.05rem; color: var(--ink);">
               ${a.title ? a.title : a.fileName}
             </strong>
             <span class="muted" style="font-size: 0.82rem;">${formatDate(a.createdAt)}</span>
           </div>
-          <div class="muted" style="font-size: 0.82rem; margin-top: -4px;">
-            ${a.fileName} · ${formatBytes(a.fileSize)}
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+            <span class="muted" style="font-size: 0.84rem;">
+              📁 ${a.fileName} · ${formatBytes(a.fileSize)}
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 4px 12px; border-radius: 20px;">
+              ✓ सुरक्षित अपलोड (Submitted)
+            </span>
           </div>
-          <audio src="${a.fileData}" controls style="width: 100%; margin-top: 6px;"></audio>
         </div>
       `
       )
