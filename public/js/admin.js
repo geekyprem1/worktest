@@ -848,12 +848,77 @@ if ($("refreshAudiosBtn")) {
   $("refreshAudiosBtn").addEventListener("click", loadWorkerAudios);
 }
 
+// ---------- Force Logout All Workers ----------
+function formatTimeAgo(ts) {
+  if (!ts) return "";
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 60) return `${sec} सेकंड पहले`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} मिनट पहले`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} घंटे पहले`;
+  const days = Math.floor(hr / 24);
+  return `${days} दिन पहले`;
+}
+
+async function loadForceLogoutStatus() {
+  const infoEl = $("lastForceLogoutInfo");
+  if (!infoEl) return;
+  try {
+    const res = await api("/api/admin/force-logout-status");
+    if (res && res.status && res.status.timestamp) {
+      const d = new Date(res.status.timestamp);
+      infoEl.textContent = `अंतिम फ़ोर्स लॉगआउट: ${d.toLocaleString("hi-IN")} (${formatTimeAgo(res.status.timestamp)})`;
+      infoEl.style.color = "#dc2626";
+    } else {
+      infoEl.textContent = "अंतिम फ़ोर्स लॉगआउट: अभी तक नहीं किया गया";
+      infoEl.style.color = "#64748b";
+    }
+  } catch (e) {
+    infoEl.textContent = "अंतिम फ़ोर्स लॉगआउट: जानकारी उपलब्ध नहीं";
+  }
+}
+
+async function handleForceLogout() {
+  const ok = confirm(
+    "⚠️ क्या आप सच में सभी वर्कर्स को तुरंत Force Logout करना चाहते हैं?\n\nवे जिस भी पेज पर काम कर रहे होंगे, उनका सेशन तुरंत खत्म हो जाएगा और उन्हें फिर से आईडी-पासवर्ड डालकर लॉगिन करना पड़ेगा।"
+  );
+  if (!ok) return;
+
+  const btn = $("forceLogoutBtn");
+  const alertEl = $("forceLogoutAlert");
+  btn.disabled = true;
+  btn.textContent = "लॉगआउट किया जा रहा है…";
+  show(alertEl, false);
+
+  try {
+    const res = await api("/api/admin/force-logout", {
+      method: "POST",
+      body: JSON.stringify({ target: "workers" }),
+    });
+
+    alertEl.textContent = "✅ " + (res.message || "सभी वर्कर्स को फ़ोर्स लॉगआउट कर दिया गया है!");
+    show(alertEl, true);
+    await loadForceLogoutStatus();
+  } catch (err) {
+    alert("त्रुटि: " + (err.message || "फ़ोर्स लॉगआउट विफल रहा"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🚪 Force Logout All Workers";
+  }
+}
+
+if ($("forceLogoutBtn")) {
+  $("forceLogoutBtn").addEventListener("click", handleForceLogout);
+}
+
 (async function init() {
   const user = await ensureAdmin();
   if (!user) return;
   setNewUserModes(["survey"]);
   setTaskType("survey");
   await refreshStats();
+  await loadForceLogoutStatus();
   await loadNoticeSettings();
   await loadWorkerResponses();
   await loadWorkerAudios();

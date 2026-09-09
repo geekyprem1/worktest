@@ -24,24 +24,51 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-function requireRole(role) {
+function asyncHandler(fn) {
   return (req, res, next) => {
-    const user = getUserFromRequest(req);
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+async function getValidUser(req) {
+  const user = getUserFromRequest(req);
+  if (!user) return null;
+
+  // Admin sessions are never invalidated by worker force logout
+  if (user.role === "admin") return user;
+
+  try {
+    const logoutInfo = await db.getForceLogoutTimestamp();
+    if (logoutInfo && logoutInfo.timestamp) {
+      const rawTs = Number(logoutInfo.timestamp);
+      const logoutSec = rawTs > 1e11 ? Math.floor(rawTs / 1000) : rawTs;
+      const userIat = Number(user.iat || 0);
+      if (userIat < logoutSec) {
+        return null; // Session revoked by admin
+      }
+    }
+  } catch (err) {
+    // If checking fails, allow through to avoid accidental global outages
+  }
+
+  return user;
+}
+
+function requireRole(role) {
+  return asyncHandler(async (req, res, next) => {
+    const user = await getValidUser(req);
     if (!user) {
-      return res.status(401).json({ error: "Not authenticated" });
+      clearAuthCookie(res);
+      return res
+        .status(401)
+        .json({ error: "Session expired or invalid. Please log in again." });
     }
     if (user.role !== role) {
       return res.status(403).json({ error: "Forbidden" });
     }
     req.user = user;
     next();
-  };
-}
-
-function asyncHandler(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
+  });
 }
 
 function mapDbError(err, res) {
@@ -94,13 +121,17 @@ app.post("/api/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/me", (req, res) => {
-  const user = getUserFromRequest(req);
-  if (!user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  res.json({ user });
-});
+app.get(
+  "/api/me",
+  asyncHandler(async (req, res) => {
+    const user = await getValidUser(req);
+    if (!user) {
+      clearAuthCookie(res);
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json({ user });
+  })
+);
 
 // ---------- Worker ----------
 app.get(
@@ -990,8 +1021,9 @@ app.get(
 app.get(
   "/api/audios/:id/download",
   asyncHandler(async (req, res) => {
-    const user = getUserFromRequest(req);
+    const user = await getValidUser(req);
     if (!user) {
+      clearAuthCookie(res);
       return res.status(401).json({ error: "Not authenticated" });
     }
     const audio = await db.getAudioById(req.params.id);
@@ -1022,6 +1054,30 @@ app.delete(
   asyncHandler(async (req, res) => {
     await db.deleteAudioUpload(req.params.id);
     res.json({ ok: true, message: "Audio deleted." });
+  })
+);
+
+// ---------- Force Logout Admin Endpoints ----------
+app.get(
+  "/api/admin/force-logout-status",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const status = await db.getForceLogoutTimestamp();
+    res.json({ ok: true, status });
+  })
+);
+
+app.post(
+  "/api/admin/force-logout",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const { target } = req.body || {};
+    const result = await db.setForceLogoutTimestamp(target || "workers");
+    res.json({
+      ok: true,
+      message: "सभी वर्कर्स का सेशन सफलतापूर्वक समाप्त (Force Logout) कर दिया गया है।",
+      status: result,
+    });
   })
 );
 

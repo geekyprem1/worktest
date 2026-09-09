@@ -53,4 +53,12 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-redirectIfLoggedIn();
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("msg") === "session_expired") {
+  errorEl.textContent =
+    "⚠️ आपका पिछला सेशन समाप्त कर दिया गया है (Force Logout)। कृपया काम जारी रखने के लिए फिर से लॉगिन करें।";
+  errorEl.classList.remove("hidden");
+  window.history.replaceState({}, document.title, window.location.pathname);
+} else {
+  redirectIfLoggedIn();
+}

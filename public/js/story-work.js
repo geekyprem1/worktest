@@ -30,7 +30,7 @@ async function checkAuth() {
   try {
     const res = await fetch("/api/me");
     if (!res.ok) {
-      window.location.href = "/";
+      window.location.href = "/?msg=session_expired";
       return null;
     }
     const data = await res.json();
@@ -303,4 +303,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("refreshMyAudiosBtn").addEventListener("click", loadMyAudios);
 
   await loadMyAudios();
+
+  // Heartbeat session monitor
+  setInterval(async () => {
+    try {
+      const res = await fetch("/api/me");
+      if (res.status === 401) {
+        window.location.href = "/?msg=session_expired";
+      }
+    } catch {}
+  }, 10000);
 });

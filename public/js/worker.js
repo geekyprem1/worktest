@@ -13,6 +13,12 @@ async function api(path, options = {}) {
     credentials: "same-origin",
     ...options,
   });
+  if (res.status === 401) {
+    window.location.href = "/?msg=session_expired";
+    const err = new Error("Session expired. Please log in again.");
+    err.status = 401;
+    throw err;
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || "Request failed");
@@ -588,3 +594,22 @@ async function loadPromoBanner() {
   loadPromoBanner();
   await refreshStatus();
 })();
+
+// Periodic session heartbeat (boot worker immediately if admin triggers Force Logout)
+setInterval(async () => {
+  try {
+    const res = await fetch("/api/me");
+    if (res.status === 401) {
+      window.location.href = "/?msg=session_expired";
+    }
+  } catch {}
+}, 10000);
+
+window.addEventListener("focus", async () => {
+  try {
+    const res = await fetch("/api/me");
+    if (res.status === 401) {
+      window.location.href = "/?msg=session_expired";
+    }
+  } catch {}
+});

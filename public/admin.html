@@ -227,6 +227,29 @@
           </p>
         </section>
 
+        <!-- Force Logout All Users Section -->
+        <section class="card panel" style="border-left: 4px solid #ef4444; background: linear-gradient(180deg, #fff5f5 0%, #ffffff 100%);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="max-width: 650px;">
+              <h2 class="section-title" style="margin-bottom: 6px; color: #b91c1c; display: flex; align-items: center; gap: 8px;">
+                <span>🔒</span> सभी यूज़र्स को तुरंत फ़ोर्स लॉगआउट करें (Force Logout All Workers)
+              </h2>
+              <p class="muted" style="margin: 0; font-size: 0.92rem; color: #475569;">
+                अगर आप चाहते हैं कि सभी वर्कर्स तुरंत लॉगआउट हो जाएँ और उन्हें काम जारी रखने के लिए <strong>फिर से लॉगिन करना पड़े</strong>, तो यह बटन दबाएँ। वर्तमान में एक्टिव/काम कर रहे वर्कर्स का सेशन भी तुरंत कट जाएगा।
+              </p>
+              <div id="lastForceLogoutInfo" class="muted" style="font-size: 0.84rem; margin-top: 8px; font-weight: 600; color: #64748b;">
+                अंतिम फ़ोर्स लॉगआउट: लोड हो रहा है…
+              </div>
+            </div>
+            <div>
+              <button id="forceLogoutBtn" class="btn btn-danger" type="button" style="font-weight: 700; padding: 12px 22px; font-size: 0.98rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">
+                🚪 Force Logout All Workers
+              </button>
+            </div>
+          </div>
+          <div id="forceLogoutAlert" class="alert alert-ok hidden" style="margin-top: 14px;"></div>
+        </section>
+
         <!-- Banner & Notice Page Content Management -->
         <section class="card panel">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
