@@ -721,6 +721,72 @@ app.post(
   })
 );
 
+// Manually complete a worker's work for today (or specified date)
+app.post(
+  "/api/admin/users/:userId/complete-work",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const userId = String(req.params.userId || "").trim().toLowerCase();
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+    const { count, date } = req.body || {};
+    let parsedCount = undefined;
+    if (count !== undefined && count !== null && count !== "") {
+      parsedCount = Number(count);
+      if (!Number.isInteger(parsedCount) || parsedCount < 0 || parsedCount > 500) {
+        return res
+          .status(400)
+          .json({ error: "Count must be an integer between 0 and 500" });
+      }
+    }
+
+    const result = await db.manuallyCompleteUserWork(userId, {
+      count: parsedCount,
+      date,
+    });
+
+    res.json({
+      ok: true,
+      message: `Work updated for "${result.userName || userId}": ${result.completed}/${result.total} completed.`,
+      ...result,
+    });
+  })
+);
+
+// Quick manual completion by user ID / count
+app.post(
+  "/api/admin/complete-work",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const { userId, count, date } = req.body || {};
+    const id = String(userId || "").trim().toLowerCase();
+    if (!id) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+    let parsedCount = undefined;
+    if (count !== undefined && count !== null && count !== "") {
+      parsedCount = Number(count);
+      if (!Number.isInteger(parsedCount) || parsedCount < 0 || parsedCount > 500) {
+        return res
+          .status(400)
+          .json({ error: "Count must be an integer between 0 and 500" });
+      }
+    }
+
+    const result = await db.manuallyCompleteUserWork(id, {
+      count: parsedCount,
+      date,
+    });
+
+    res.json({
+      ok: true,
+      message: `Work updated for "${result.userName || id}": ${result.completed}/${result.total} completed.`,
+      ...result,
+    });
+  })
+);
+
 // Delete a worker (and all their work/settings)
 app.delete(
   "/api/admin/users/:userId",

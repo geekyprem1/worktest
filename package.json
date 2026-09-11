@@ -7,7 +7,7 @@
     "start": "node -r dotenv/config server.js dotenv_config_path=.env.local",
     "seed": "node scripts/seed-templates.js",
     "seed:supabase": "node scripts/seed-supabase.js",
-    "dev": "node -r dotenv/config server.js dotenv_config_path=.env.local"
+    "dev": "node --watch -r dotenv/config server.js dotenv_config_path=.env.local"
   },
   "engines": {
     "node": ">=18"

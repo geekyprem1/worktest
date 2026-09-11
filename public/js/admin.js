@@ -117,6 +117,21 @@ function applyStats(data) {
   }`;
   $("generatedAt").textContent = `Last generated: ${formatDate(data.generatedAt)}`;
   renderUsersTable(data.perUser || []);
+  populateQuickCompleteWorkers(data.perUser || []);
+}
+
+function populateQuickCompleteWorkers(perUser) {
+  const select = $("quickCompleteWorkerSelect");
+  if (!select) return;
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">-- Worker Select करें --</option>';
+  (perUser || []).forEach((u) => {
+    const opt = document.createElement("option");
+    opt.value = u.userId;
+    opt.textContent = `${u.name} (@${u.userId}) - Today: ${u.completed || 0}/${u.total || 0}`;
+    select.appendChild(opt);
+  });
+  if (currentVal) select.value = currentVal;
 }
 
 function renderUsersTable(perUser) {
@@ -142,18 +157,22 @@ function renderUsersTable(perUser) {
       <td><code>${escapeHtml(u.userId)}</code></td>
       <td>${escapeHtml(u.name)}</td>
       <td>${modeLabel(u.settings)}</td>
-      <td>${escapeHtml(todayLabel)}</td>
+      <td><strong style="color: ${u.total > 0 && u.completed >= u.total ? 'var(--ok)' : 'inherit'};">${escapeHtml(todayLabel)}</strong></td>
       <td>${u.completedDays ?? 0}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
+          <button class="btn btn-small btn-complete" type="button" style="background:#16a34a;border-color:#16a34a;color:#fff;font-weight:600;">✓ Complete</button>
           <button class="btn btn-secondary btn-small btn-edit" type="button">Edit</button>
-          <button class="btn btn-secondary btn-small btn-reset" type="button">Reset work</button>
+          <button class="btn btn-secondary btn-small btn-reset" type="button">Reset</button>
           <button class="btn btn-warn btn-small btn-ban" type="button">${banLabel}</button>
           <button class="btn btn-danger btn-small btn-delete" type="button">Delete</button>
         </div>
       </td>
     `;
+    tr.querySelector(".btn-complete").addEventListener("click", () =>
+      openCompleteModal(u)
+    );
     tr.querySelector(".btn-edit").addEventListener("click", () =>
       openEditModal(u.userId)
     );
@@ -552,6 +571,148 @@ async function saveEdit() {
   }
 }
 
+// ---------- Complete Work Modal & Quick Panel ----------
+let completingUser = null;
+
+function setCompleteModalMessage(text) {
+  const el = $("completeModalMessage");
+  if (!text) {
+    show(el, false);
+    return;
+  }
+  el.textContent = text;
+  show(el, true);
+}
+
+function setCompleteModalError(text) {
+  const el = $("completeModalError");
+  if (!text) {
+    show(el, false);
+    return;
+  }
+  el.textContent = text;
+  show(el, true);
+}
+
+function openCompleteModal(user) {
+  completingUser = user;
+  setCompleteModalMessage("");
+  setCompleteModalError("");
+  $("completeModalWorkerName").textContent = user.name || user.userId;
+  $("completeModalWorkerId").textContent = `@${user.userId}`;
+
+  const currentTotal = Number(user.total || 0);
+  const currentCompleted = Number(user.completed || 0);
+  $("completeModalCurrentStatus").textContent =
+    currentTotal > 0
+      ? `वर्तमान स्थिति: ${currentCompleted} / ${currentTotal} टास्क्स पूर्ण`
+      : "आज का कोई बैच असाइन नहीं है (अपडेट करने पर अपने आप बन जाएगा)";
+
+  // If already has total tasks, suggest that count, else 50
+  const defaultVal = currentTotal > 0 ? currentTotal : 50;
+  $("modalCompleteCountInput").value = defaultVal;
+
+  // Reset chips active state
+  document
+    .querySelectorAll("#completeQuickPresets .chip")
+    .forEach((c) => c.classList.remove("active"));
+  const firstChip = document.querySelector("#completeQuickPresets .chip");
+  if (firstChip) firstChip.classList.add("active");
+
+  show($("completeModal"), true);
+}
+
+function closeCompleteModal() {
+  completingUser = null;
+  show($("completeModal"), false);
+}
+
+async function saveCompleteModal() {
+  if (!completingUser) return;
+  const rawCount = $("modalCompleteCountInput").value;
+  const count = Number(rawCount);
+  if (!rawCount || !Number.isInteger(count) || count < 0 || count > 500) {
+    setCompleteModalError("कृपया 0 से 500 के बीच एक मान्य संख्या दर्ज करें।");
+    return;
+  }
+
+  const btn = $("completeModalSave");
+  btn.disabled = true;
+  btn.textContent = "अपडेट किया जा रहा है…";
+  setCompleteModalMessage("");
+  setCompleteModalError("");
+
+  try {
+    const res = await api(
+      `/api/admin/users/${encodeURIComponent(
+        completingUser.userId
+      )}/complete-work`,
+      {
+        method: "POST",
+        body: JSON.stringify({ count }),
+      }
+    );
+
+    setCompleteModalMessage(
+      `✅ ${res.message || "कार्य सफलतापूर्वक पूरा कर दिया गया!"}`
+    );
+    await refreshStats();
+    setTimeout(() => {
+      closeCompleteModal();
+    }, 1000);
+  } catch (err) {
+    setCompleteModalError(err.message || "वर्क कंप्लीट करने में समस्या आई।");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "✓ Complete & Save";
+  }
+}
+
+async function handleQuickComplete() {
+  const select = $("quickCompleteWorkerSelect");
+  const countInput = $("quickCompleteCountInput");
+  const alertEl = $("quickCompleteAlert");
+  const btn = $("quickCompleteBtn");
+
+  const userId = select.value;
+  if (!userId) {
+    alert("कृपया पहले एक Worker चुनें।");
+    return;
+  }
+
+  const rawCount = countInput.value;
+  const count = Number(rawCount);
+  if (!rawCount || !Number.isInteger(count) || count < 0 || count > 500) {
+    alert("कृपया 0 से 500 के बीच एक मान्य संख्या दर्ज करें।");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "अपडेट हो रहा है…";
+  show(alertEl, false);
+
+  try {
+    const res = await api(
+      `/api/admin/users/${encodeURIComponent(userId)}/complete-work`,
+      {
+        method: "POST",
+        body: JSON.stringify({ count }),
+      }
+    );
+
+    alertEl.textContent = `✅ ${
+      res.message || "वर्क सफलतापूर्वक अपडेट हो गया!"
+    }`;
+    show(alertEl, true);
+    await refreshStats();
+  } catch (err) {
+    alert("त्रुटि: " + (err.message || "वर्क अपडेट विफल रहा।"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "✓ Update & Complete Work";
+  }
+}
+
 document.querySelectorAll("#newUserTaskTypes .chip").forEach((chip) => {
   chip.addEventListener("click", () => toggleChip(chip));
 });
@@ -605,6 +766,30 @@ $("logoutBtn").addEventListener("click", logout);
 $("editModalClose").addEventListener("click", closeEditModal);
 $("editModalCancel").addEventListener("click", closeEditModal);
 $("editModalSave").addEventListener("click", saveEdit);
+
+if ($("completeModalClose")) $("completeModalClose").addEventListener("click", closeCompleteModal);
+if ($("completeModalCancel")) $("completeModalCancel").addEventListener("click", closeCompleteModal);
+if ($("completeModalSave")) $("completeModalSave").addEventListener("click", saveCompleteModal);
+
+document.querySelectorAll("#completeQuickPresets .chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    document
+      .querySelectorAll("#completeQuickPresets .chip")
+      .forEach((c) => c.classList.remove("active"));
+    chip.classList.add("active");
+    const preset = chip.dataset.preset;
+    if (preset === "all") {
+      const total = (completingUser && completingUser.total) || 50;
+      $("modalCompleteCountInput").value = total > 0 ? total : 50;
+    } else {
+      $("modalCompleteCountInput").value = preset;
+    }
+  });
+});
+
+if ($("quickCompleteBtn")) {
+  $("quickCompleteBtn").addEventListener("click", handleQuickComplete);
+}
 
 async function loadNoticeSettings() {
   try {

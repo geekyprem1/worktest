@@ -227,6 +227,43 @@
           </p>
         </section>
 
+        <!-- Quick Manual Work Complete Section -->
+        <section class="card panel" style="border-left: 4px solid #16a34a; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);">
+          <h2 class="section-title" style="margin-bottom: 6px; color: #15803d; display: flex; align-items: center; gap: 8px;">
+            <span>⚡</span> मैनुअल वर्क कंप्लीट करें (Quick Manual Work Complete)
+          </h2>
+          <p class="muted" style="margin-top: 0; font-size: 0.92rem; color: #374151;">
+            यहाँ से आप किसी भी वर्कर का काम सीधे नंबर डालकर (जैसे 50, 40 आदि) तुरंत कंप्लीट मार्क कर सकते हैं। अगर आज का बैच असाइन नहीं था, तो भी सिस्टम खुद जनरेट करके कंप्लीट कर देगा।
+          </p>
+
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: flex-end; gap: 14px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="quickCompleteWorkerSelect" style="font-weight: 600;">Worker चुनें</label>
+              <select id="quickCompleteWorkerSelect" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; background: #fff; cursor: pointer;">
+                <option value="">-- Worker Select करें --</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="quickCompleteCountInput" style="font-weight: 600;">टास्क संख्या (Completed Count)</label>
+              <input
+                id="quickCompleteCountInput"
+                type="number"
+                min="1"
+                max="500"
+                value="50"
+                placeholder="उदा. 50"
+                style="font-weight: 600;"
+              />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <button id="quickCompleteBtn" class="btn btn-primary" type="button" style="background: #16a34a; border-color: #16a34a; font-weight: 700; width: 100%; padding: 11px 16px;">
+                ✓ Update & Complete Work
+              </button>
+            </div>
+          </div>
+          <div id="quickCompleteAlert" class="alert alert-ok hidden" style="margin-top: 14px;"></div>
+        </section>
+
         <!-- Force Logout All Users Section -->
         <section class="card panel" style="border-left: 4px solid #ef4444; background: linear-gradient(180deg, #fff5f5 0%, #ffffff 100%);">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
@@ -540,6 +577,57 @@
           </button>
           <button id="editModalSave" class="btn btn-primary" type="button">
             Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Complete work modal -->
+    <div id="completeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal" style="max-width: 480px;">
+        <div class="modal-header">
+          <h2 class="section-title" id="completeModalTitle" style="color: #16a34a; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>✓</span> Manually Complete Work
+          </h2>
+          <button id="completeModalClose" class="btn btn-ghost" type="button">×</button>
+        </div>
+        <div class="modal-body">
+          <div id="completeModalUserInfo" style="padding: 12px 14px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem;">
+            <div>Worker: <strong id="completeModalWorkerName">—</strong> (<code id="completeModalWorkerId">—</code>)</div>
+            <div class="muted" id="completeModalCurrentStatus" style="margin-top: 5px; font-size: 0.88rem;">Current: —</div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalCompleteCountInput" style="font-weight: 600;">कितने टास्क्स कंप्लीट मार्क करने हैं? (Enter Count)</label>
+            <input
+              id="modalCompleteCountInput"
+              type="number"
+              min="1"
+              max="500"
+              value="50"
+              style="font-size: 1.25rem; font-weight: 700; text-align: center; padding: 10px; border: 2px solid #16a34a; border-radius: 8px;"
+            />
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div class="muted" style="font-size: 0.82rem; margin-bottom: 6px; font-weight: 600;">Quick Presets (जल्दी चुनने के लिए):</div>
+            <div class="chip-row" id="completeQuickPresets" style="gap: 8px;">
+              <button class="chip active" type="button" data-preset="all">Full Complete (All)</button>
+              <button class="chip" type="button" data-preset="50">50</button>
+              <button class="chip" type="button" data-preset="40">40</button>
+              <button class="chip" type="button" data-preset="20">20</button>
+            </div>
+          </div>
+
+          <div id="completeModalMessage" class="alert alert-ok hidden" style="margin-bottom: 10px;"></div>
+          <div id="completeModalError" class="alert alert-error hidden" style="margin-bottom: 10px;"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="completeModalCancel" class="btn btn-secondary" type="button">
+            Cancel
+          </button>
+          <button id="completeModalSave" class="btn btn-primary" type="button" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
+            ✓ Complete & Save
           </button>
         </div>
       </div>
