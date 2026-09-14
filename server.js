@@ -844,6 +844,17 @@ app.post(
         .json({ error: 'taskType must be "survey", "form", or "mix"' });
     }
 
+    const rawUserIds = Array.isArray(body.userIds) ? body.userIds : null;
+    const userIds = rawUserIds
+      ? rawUserIds.map((s) => String(s).trim()).filter(Boolean)
+      : null;
+
+    if (body.assignMode === "selected" && (!userIds || userIds.length === 0)) {
+      return res
+        .status(400)
+        .json({ error: "Please select at least one worker to assign work." });
+    }
+
     let result;
     if (taskType === "mix") {
       const surveyCount = Number(body.surveyCount);
@@ -877,10 +888,15 @@ app.post(
         taskType: "mix",
         surveyCount,
         formCount,
+        userIds,
       });
+      const targetWorkerDesc =
+        userIds && userIds.length > 0
+          ? `${result.workerCount} selected worker(s)`
+          : `${result.workerCount} matching worker(s)`;
       res.json({
         ok: true,
-        message: `Daily mixed batch updated for ${result.workDate}: ${result.surveyCount} surveys + ${result.formCount} forms → ${result.workerCount} matching worker(s)${
+        message: `Daily mixed batch updated for ${result.workDate}: ${result.surveyCount} surveys + ${result.formCount} forms → ${targetWorkerDesc}${
           result.skippedCount > 0 ? ` (${result.skippedCount} skipped)` : ""
         }.`,
         ...result,
@@ -895,11 +911,19 @@ app.post(
     if (count < 1 || count > 500) {
       return res.status(400).json({ error: "count must be between 1 and 500" });
     }
-    result = await db.generatePerWorkerDailyBatch({ taskType, count });
+    result = await db.generatePerWorkerDailyBatch({
+      taskType,
+      count,
+      userIds,
+    });
     const label = taskType === "form" ? "forms" : "surveys";
+    const targetWorkerDesc =
+      userIds && userIds.length > 0
+        ? `${result.workerCount} selected worker(s)`
+        : `${result.workerCount} matching worker(s)`;
     res.json({
       ok: true,
-      message: `Daily ${label} updated for ${result.workDate}: ${result.count} ${label} → ${result.workerCount} matching worker(s)${
+      message: `Daily ${label} updated for ${result.workDate}: ${result.count} ${label} → ${targetWorkerDesc}${
         result.skippedCount > 0 ? ` (${result.skippedCount} skipped)` : ""
       }.`,
       ...result,

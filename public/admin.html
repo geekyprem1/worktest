@@ -144,11 +144,9 @@
         </section>
 
         <section class="card panel">
-          <h2 class="section-title">Generate today's batch</h2>
+          <h2 class="section-title">Assign work / Generate today's batch (काम असाइन करें)</h2>
           <p class="muted" style="margin-top: 0">
-            Pick a task type and a count. <strong>Only workers whose personal
-            type matches</strong> will get a batch. Generating again replaces
-            today's batch (previous progress is archived).
+            Pick a task type, count, aur chuninda workers ko checkbox se select karke kaam assign karein.
           </p>
 
           <div class="chip-row" id="taskTypes">
@@ -207,6 +205,50 @@
             </div>
             <div class="muted" id="mixTotal" style="margin-bottom: 8px">
               Total: 30 / matching worker
+            </div>
+          </div>
+
+          <!-- Target Workers Selection -->
+          <div class="assign-target-box">
+            <label style="font-weight: 700; font-size: 0.98rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>👥</span> काम किसे असाइन करना है? (Assign Target)
+            </label>
+            <div class="assign-mode-tabs" id="assignTargetTabs">
+              <button class="assign-mode-tab active" type="button" data-target-mode="all">
+                <span>🌐</span> सभी वर्कर्स (All Workers)
+              </button>
+              <button class="assign-mode-tab" type="button" data-target-mode="selected">
+                <span>☑️</span> वर्कर चुनें (Select via Checkbox)
+              </button>
+            </div>
+
+            <div id="assignSpecificWorkersPanel" class="hidden">
+              <div class="assign-search-bar">
+                <input
+                  id="assignWorkerSearch"
+                  type="text"
+                  class="assign-search-input"
+                  placeholder="🔍 Search worker by name or ID..."
+                  autocomplete="off"
+                />
+                <button id="assignSelectAllBtn" class="btn btn-secondary btn-small" type="button">
+                  Select All
+                </button>
+                <button id="assignDeselectAllBtn" class="btn btn-secondary btn-small" type="button">
+                  Clear All
+                </button>
+              </div>
+
+              <div class="assign-actions-bar">
+                <span class="muted" id="assignSelectedCount">0 workers selected</span>
+                <span class="muted" style="font-size: 0.82rem;">(Tap worker to toggle)</span>
+              </div>
+
+              <div class="assign-workers-list" id="assignWorkersList">
+                <div class="muted" style="padding: 12px; grid-column: 1 / -1; text-align: center;">
+                  Loading workers…
+                </div>
+              </div>
             </div>
           </div>
 

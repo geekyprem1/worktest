@@ -118,6 +118,7 @@ function applyStats(data) {
   $("generatedAt").textContent = `Last generated: ${formatDate(data.generatedAt)}`;
   renderUsersTable(data.perUser || []);
   populateQuickCompleteWorkers(data.perUser || []);
+  renderAssignWorkers(data.perUser || []);
 }
 
 function populateQuickCompleteWorkers(perUser) {
@@ -376,9 +377,162 @@ function updateMixTotal() {
   $("mixTotal").textContent = `Total: ${s + f} / matching worker`;
 }
 
+// ---------- Target Worker Selection for Batch Assignment ----------
+let currentAssignTargetMode = "all"; // "all" | "selected"
+let cachedAssignWorkers = [];
+let selectedAssignUserIds = new Set();
+let assignSearchQuery = "";
+
+function setAssignTargetMode(mode) {
+  currentAssignTargetMode = mode;
+  document
+    .querySelectorAll("#assignTargetTabs .assign-mode-tab")
+    .forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.targetMode === mode);
+    });
+
+  const panel = $("assignSpecificWorkersPanel");
+  if (panel) show(panel, mode === "selected");
+  updateAssignSummary();
+}
+
+function updateAssignSummary() {
+  const count = selectedAssignUserIds.size;
+  const countEl = $("assignSelectedCount");
+  if (countEl) {
+    countEl.textContent = `${count} worker${count === 1 ? "" : "s"} selected`;
+  }
+
+  const genBtn = $("generateBtn");
+  if (genBtn) {
+    if (currentAssignTargetMode === "selected") {
+      genBtn.textContent =
+        count > 0
+          ? `Assign Work to Selected (${count})`
+          : "Assign Work to Selected";
+    } else {
+      genBtn.textContent = "Generate / Update Today";
+    }
+  }
+}
+
+function renderAssignWorkers(perUser) {
+  cachedAssignWorkers = perUser || [];
+  const listEl = $("assignWorkersList");
+  if (!listEl) return;
+
+  const query = assignSearchQuery.toLowerCase();
+  const filtered = cachedAssignWorkers.filter((u) => {
+    if (!query) return true;
+    const nameMatch = (u.name || "").toLowerCase().includes(query);
+    const idMatch = (u.userId || "").toLowerCase().includes(query);
+    return nameMatch || idMatch;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="muted" style="padding: 14px; grid-column: 1 / -1; text-align: center;">${
+      cachedAssignWorkers.length === 0
+        ? "No workers yet. Add a user above."
+        : "No workers match your search."
+    }</div>`;
+    updateAssignSummary();
+    return;
+  }
+
+  listEl.innerHTML = "";
+  filtered.forEach((u) => {
+    const isSelected = selectedAssignUserIds.has(u.userId);
+    const card = document.createElement("div");
+    card.className = `worker-select-card${isSelected ? " selected" : ""}${
+      u.banned ? " banned" : ""
+    }`;
+
+    const modeText =
+      (u.settings && u.settings.taskMode) || u.mode || "surveys";
+    const progressText = u.total > 0 ? `${u.completed}/${u.total}` : "0";
+
+    card.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(u.userId)}" ${
+      isSelected ? "checked" : ""
+    } ${u.banned ? "disabled" : ""} />
+      <div class="worker-select-info">
+        <div class="worker-select-name">${escapeHtml(u.name)}</div>
+        <div class="worker-select-sub">
+          <code>@${escapeHtml(u.userId)}</code>
+          <span class="worker-select-badge">${escapeHtml(modeText)}</span>
+          <span style="color: ${
+            u.total > 0 && u.completed >= u.total
+              ? "var(--ok)"
+              : "var(--muted)"
+          }; font-weight: 600;">Today: ${escapeHtml(progressText)}</span>
+          ${
+            u.banned
+              ? '<span class="badge badge-warn" style="font-size:0.65rem; padding: 1px 4px;">Banned</span>'
+              : ""
+          }
+        </div>
+      </div>
+    `;
+
+    const checkbox = card.querySelector("input[type='checkbox']");
+
+    const toggleWorker = () => {
+      if (u.banned) return;
+      if (selectedAssignUserIds.has(u.userId)) {
+        selectedAssignUserIds.delete(u.userId);
+        checkbox.checked = false;
+        card.classList.remove("selected");
+      } else {
+        selectedAssignUserIds.add(u.userId);
+        checkbox.checked = true;
+        card.classList.add("selected");
+      }
+      updateAssignSummary();
+    };
+
+    card.addEventListener("click", (e) => {
+      if (e.target === checkbox) return;
+      toggleWorker();
+    });
+
+    checkbox.addEventListener("change", () => {
+      if (u.banned) {
+        checkbox.checked = false;
+        return;
+      }
+      if (checkbox.checked) {
+        selectedAssignUserIds.add(u.userId);
+        card.classList.add("selected");
+      } else {
+        selectedAssignUserIds.delete(u.userId);
+        card.classList.remove("selected");
+      }
+      updateAssignSummary();
+    });
+
+    listEl.appendChild(card);
+  });
+
+  updateAssignSummary();
+}
+
 async function generate() {
   setError("");
   setMessage("");
+
+  let payload = {};
+  if (currentAssignTargetMode === "selected") {
+    const userIds = Array.from(selectedAssignUserIds);
+    if (!userIds.length) {
+      setError(
+        "कृपया कम से कम एक वर्कर को चेकबॉक्स से चुनें (Please select at least one worker)."
+      );
+      return;
+    }
+    payload.userIds = userIds;
+    payload.assignMode = "selected";
+  }
+
   $("generateBtn").disabled = true;
   try {
     if (currentTaskType === "mix") {
@@ -392,9 +546,10 @@ async function generate() {
         setError("Total per worker must be at most 500.");
         return;
       }
+      payload = { ...payload, taskType: "mix", surveyCount, formCount };
       const data = await api("/api/admin/generate", {
         method: "POST",
-        body: JSON.stringify({ taskType: "mix", surveyCount, formCount }),
+        body: JSON.stringify(payload),
       });
       setMessage(
         data.message || `Generated ${surveyCount}+${formCount} mix.`
@@ -406,9 +561,10 @@ async function generate() {
         return;
       }
       const label = currentTaskType === "form" ? "forms" : "surveys";
+      payload = { ...payload, count, taskType: currentTaskType };
       const data = await api("/api/admin/generate", {
         method: "POST",
-        body: JSON.stringify({ count, taskType: currentTaskType }),
+        body: JSON.stringify(payload),
       });
       setMessage(data.message || `Generated ${count} ${label}.`);
     }
@@ -766,6 +922,54 @@ $("logoutBtn").addEventListener("click", logout);
 $("editModalClose").addEventListener("click", closeEditModal);
 $("editModalCancel").addEventListener("click", closeEditModal);
 $("editModalSave").addEventListener("click", saveEdit);
+
+// Worker assignment target mode tabs & controls
+document.querySelectorAll("#assignTargetTabs .assign-mode-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setAssignTargetMode(tab.dataset.targetMode));
+});
+
+if ($("assignWorkerSearch")) {
+  $("assignWorkerSearch").addEventListener("input", (e) => {
+    assignSearchQuery = e.target.value.trim().toLowerCase();
+    renderAssignWorkers(cachedAssignWorkers);
+  });
+}
+
+if ($("assignSelectAllBtn")) {
+  $("assignSelectAllBtn").addEventListener("click", () => {
+    const query = assignSearchQuery.toLowerCase();
+    cachedAssignWorkers
+      .filter((u) => !u.banned)
+      .filter((u) => {
+        if (!query) return true;
+        return (
+          (u.name || "").toLowerCase().includes(query) ||
+          (u.userId || "").toLowerCase().includes(query)
+        );
+      })
+      .forEach((u) => selectedAssignUserIds.add(u.userId));
+    renderAssignWorkers(cachedAssignWorkers);
+  });
+}
+
+if ($("assignDeselectAllBtn")) {
+  $("assignDeselectAllBtn").addEventListener("click", () => {
+    const query = assignSearchQuery.toLowerCase();
+    if (!query) {
+      selectedAssignUserIds.clear();
+    } else {
+      cachedAssignWorkers
+        .filter((u) => {
+          return (
+            (u.name || "").toLowerCase().includes(query) ||
+            (u.userId || "").toLowerCase().includes(query)
+          );
+        })
+        .forEach((u) => selectedAssignUserIds.delete(u.userId));
+    }
+    renderAssignWorkers(cachedAssignWorkers);
+  });
+}
 
 if ($("completeModalClose")) $("completeModalClose").addEventListener("click", closeCompleteModal);
 if ($("completeModalCancel")) $("completeModalCancel").addEventListener("click", closeCompleteModal);
