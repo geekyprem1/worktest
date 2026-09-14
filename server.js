@@ -946,9 +946,10 @@ app.get(
     // If notice is targeted to selected workers
     if (notice.targetMode === "selected") {
       const allowedUsers = Array.isArray(notice.targetUsers)
-        ? notice.targetUsers.map(String)
+        ? notice.targetUsers.map((s) => String(s).toLowerCase().trim().replace(/^@/, ""))
         : [];
-      const isAllowed = user && allowedUsers.includes(String(user.userId));
+      const userUserId = user && user.userId ? String(user.userId).toLowerCase().trim().replace(/^@/, "") : "";
+      const isAllowed = Boolean(userUserId && allowedUsers.includes(userUserId));
       if (!isAllowed) {
         return res.json({
           ok: true,
