@@ -428,6 +428,48 @@
                 placeholder="https://example.com/image1.jpg"
               ></textarea>
             </div>
+          <!-- Target Workers Selection for Banner & Notice -->
+          <div class="assign-target-box">
+            <label style="font-weight: 700; font-size: 0.98rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>👥</span> यह बैनर व नोटिस किस-किस वर्कर को दिखाना है? (Target Audience)
+            </label>
+            <div class="assign-mode-tabs" id="noticeTargetTabs">
+              <button class="assign-mode-tab active" type="button" data-notice-mode="all">
+                <span>🌐</span> सभी वर्कर्स (All Workers)
+              </button>
+              <button class="assign-mode-tab" type="button" data-notice-mode="selected">
+                <span>☑️</span> चुने हुए वर्कर्स (Select via Checkbox)
+              </button>
+            </div>
+
+            <div id="noticeSpecificWorkersPanel" class="hidden">
+              <div class="assign-search-bar">
+                <input
+                  id="noticeWorkerSearch"
+                  type="text"
+                  class="assign-search-input"
+                  placeholder="🔍 Search worker by name or ID..."
+                  autocomplete="off"
+                />
+                <button id="noticeSelectAllBtn" class="btn btn-secondary btn-small" type="button">
+                  Select All
+                </button>
+                <button id="noticeDeselectAllBtn" class="btn btn-secondary btn-small" type="button">
+                  Clear All
+                </button>
+              </div>
+
+              <div class="assign-actions-bar">
+                <span class="muted" id="noticeSelectedCount">0 workers selected</span>
+                <span class="muted" style="font-size: 0.82rem;">(Tick workers who can see banner & notice)</span>
+              </div>
+
+              <div class="assign-workers-list" id="noticeWorkersList">
+                <div class="muted" style="padding: 12px; grid-column: 1 / -1; text-align: center;">
+                  Loading workers…
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="noticeSaveMessage" class="alert alert-ok hidden" style="margin-bottom: 14px;"></div>

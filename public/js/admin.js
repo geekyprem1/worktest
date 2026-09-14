@@ -119,6 +119,7 @@ function applyStats(data) {
   renderUsersTable(data.perUser || []);
   populateQuickCompleteWorkers(data.perUser || []);
   renderAssignWorkers(data.perUser || []);
+  renderNoticeTargetWorkers(data.perUser || []);
 }
 
 function populateQuickCompleteWorkers(perUser) {
@@ -995,6 +996,127 @@ if ($("quickCompleteBtn")) {
   $("quickCompleteBtn").addEventListener("click", handleQuickComplete);
 }
 
+// ---------- Notice Target Worker Selection ----------
+let noticeTargetMode = "all"; // "all" | "selected"
+let cachedNoticeWorkers = [];
+let selectedNoticeUserIds = new Set();
+let noticeSearchQuery = "";
+
+function setNoticeTargetMode(mode) {
+  noticeTargetMode = mode;
+  document
+    .querySelectorAll("#noticeTargetTabs .assign-mode-tab")
+    .forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.noticeMode === mode);
+    });
+
+  const panel = $("noticeSpecificWorkersPanel");
+  if (panel) show(panel, mode === "selected");
+  updateNoticeSelectedSummary();
+}
+
+function updateNoticeSelectedSummary() {
+  const count = selectedNoticeUserIds.size;
+  const countEl = $("noticeSelectedCount");
+  if (countEl) {
+    countEl.textContent = `${count} worker${count === 1 ? "" : "s"} selected`;
+  }
+}
+
+function renderNoticeTargetWorkers(perUser) {
+  if (perUser) cachedNoticeWorkers = perUser;
+  const listEl = $("noticeWorkersList");
+  if (!listEl) return;
+
+  const query = noticeSearchQuery.toLowerCase();
+  const filtered = cachedNoticeWorkers.filter((u) => {
+    if (!query) return true;
+    const nameMatch = (u.name || "").toLowerCase().includes(query);
+    const idMatch = (u.userId || "").toLowerCase().includes(query);
+    return nameMatch || idMatch;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="muted" style="padding: 14px; grid-column: 1 / -1; text-align: center;">${
+      cachedNoticeWorkers.length === 0
+        ? "No workers yet."
+        : "No workers match your search."
+    }</div>`;
+    updateNoticeSelectedSummary();
+    return;
+  }
+
+  listEl.innerHTML = "";
+  filtered.forEach((u) => {
+    const isSelected = selectedNoticeUserIds.has(u.userId);
+    const card = document.createElement("div");
+    card.className = `worker-select-card${isSelected ? " selected" : ""}${
+      u.banned ? " banned" : ""
+    }`;
+
+    const modeText =
+      (u.settings && u.settings.taskMode) || u.mode || "surveys";
+
+    card.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(u.userId)}" ${
+      isSelected ? "checked" : ""
+    } ${u.banned ? "disabled" : ""} />
+      <div class="worker-select-info">
+        <div class="worker-select-name">${escapeHtml(u.name)}</div>
+        <div class="worker-select-sub">
+          <code>@${escapeHtml(u.userId)}</code>
+          <span class="worker-select-badge">${escapeHtml(modeText)}</span>
+          ${
+            u.banned
+              ? '<span class="badge badge-warn" style="font-size:0.65rem; padding: 1px 4px;">Banned</span>'
+              : '<span class="badge badge-ok" style="font-size:0.65rem; padding: 1px 4px;">Active</span>'
+          }
+        </div>
+      </div>
+    `;
+
+    const checkbox = card.querySelector("input[type='checkbox']");
+
+    const toggleWorker = () => {
+      if (u.banned) return;
+      if (selectedNoticeUserIds.has(u.userId)) {
+        selectedNoticeUserIds.delete(u.userId);
+        checkbox.checked = false;
+        card.classList.remove("selected");
+      } else {
+        selectedNoticeUserIds.add(u.userId);
+        checkbox.checked = true;
+        card.classList.add("selected");
+      }
+      updateNoticeSelectedSummary();
+    };
+
+    card.addEventListener("click", (e) => {
+      if (e.target === checkbox) return;
+      toggleWorker();
+    });
+
+    checkbox.addEventListener("change", () => {
+      if (u.banned) {
+        checkbox.checked = false;
+        return;
+      }
+      if (checkbox.checked) {
+        selectedNoticeUserIds.add(u.userId);
+        card.classList.add("selected");
+      } else {
+        selectedNoticeUserIds.delete(u.userId);
+        card.classList.remove("selected");
+      }
+      updateNoticeSelectedSummary();
+    });
+
+    listEl.appendChild(card);
+  });
+
+  updateNoticeSelectedSummary();
+}
+
 async function loadNoticeSettings() {
   try {
     const data = await api("/api/notice");
@@ -1011,6 +1133,20 @@ async function loadNoticeSettings() {
         ? notice.extraImages.join("\n")
         : "";
     }
+
+    // Set targeting settings
+    if (notice.targetMode) {
+      setNoticeTargetMode(notice.targetMode);
+    } else {
+      setNoticeTargetMode("all");
+    }
+
+    if (Array.isArray(notice.targetUsers)) {
+      selectedNoticeUserIds = new Set(notice.targetUsers.map(String));
+    } else {
+      selectedNoticeUserIds = new Set();
+    }
+    renderNoticeTargetWorkers(cachedNoticeWorkers);
   } catch (err) {
     console.warn("Could not load notice settings:", err);
   }
@@ -1022,6 +1158,13 @@ async function saveNoticeSettings() {
   const errEl = $("noticeSaveError");
   show(msgEl, false);
   show(errEl, false);
+
+  if (noticeTargetMode === "selected" && selectedNoticeUserIds.size === 0) {
+    errEl.textContent = "कृपया कम से कम एक वर्कर को चेकबॉक्स से चुनें या 'सभी वर्कर्स' विकल्प चुनें।";
+    show(errEl, true);
+    return;
+  }
+
   saveBtn.disabled = true;
 
   try {
@@ -1049,6 +1192,8 @@ async function saveNoticeSettings() {
         actionUrl,
         videoUrl,
         extraImages,
+        targetMode: noticeTargetMode,
+        targetUsers: Array.from(selectedNoticeUserIds),
       }),
     });
 
@@ -1065,6 +1210,54 @@ async function saveNoticeSettings() {
 
 if ($("saveNoticeBtn")) {
   $("saveNoticeBtn").addEventListener("click", saveNoticeSettings);
+}
+
+// Notice targeting event listeners
+document.querySelectorAll("#noticeTargetTabs .assign-mode-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setNoticeTargetMode(tab.dataset.noticeMode));
+});
+
+if ($("noticeWorkerSearch")) {
+  $("noticeWorkerSearch").addEventListener("input", (e) => {
+    noticeSearchQuery = e.target.value.trim().toLowerCase();
+    renderNoticeTargetWorkers(cachedNoticeWorkers);
+  });
+}
+
+if ($("noticeSelectAllBtn")) {
+  $("noticeSelectAllBtn").addEventListener("click", () => {
+    const query = noticeSearchQuery.toLowerCase();
+    cachedNoticeWorkers
+      .filter((u) => !u.banned)
+      .filter((u) => {
+        if (!query) return true;
+        return (
+          (u.name || "").toLowerCase().includes(query) ||
+          (u.userId || "").toLowerCase().includes(query)
+        );
+      })
+      .forEach((u) => selectedNoticeUserIds.add(u.userId));
+    renderNoticeTargetWorkers(cachedNoticeWorkers);
+  });
+}
+
+if ($("noticeDeselectAllBtn")) {
+  $("noticeDeselectAllBtn").addEventListener("click", () => {
+    const query = noticeSearchQuery.toLowerCase();
+    if (!query) {
+      selectedNoticeUserIds.clear();
+    } else {
+      cachedNoticeWorkers
+        .filter((u) => {
+          return (
+            (u.name || "").toLowerCase().includes(query) ||
+            (u.userId || "").toLowerCase().includes(query)
+          );
+        })
+        .forEach((u) => selectedNoticeUserIds.delete(u.userId));
+    }
+    renderNoticeTargetWorkers(cachedNoticeWorkers);
+  });
 }
 
 async function loadWorkerResponses() {

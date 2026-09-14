@@ -573,7 +573,7 @@ async function loadPromoBanner() {
       const bannerWrap = $("promoBannerWrap");
       const bannerImg = $("promoBannerImg");
       if (bannerWrap) {
-        if (data.notice.bannerEnabled === false) {
+        if (data.notice.bannerEnabled === false || data.notice.visible === false) {
           bannerWrap.classList.add("hidden");
         } else {
           bannerWrap.classList.remove("hidden");

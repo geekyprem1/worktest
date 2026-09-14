@@ -47,6 +47,19 @@ async function loadNotice() {
     const data = await res.json().catch(() => ({}));
     const notice = data.notice || {};
 
+    if (notice.notAllowed || notice.visible === false) {
+      const shell = document.querySelector(".shell") || document.body;
+      shell.innerHTML = `
+        <div class="card" style="text-align: center; padding: 48px 24px; margin-top: 40px; border-radius: 16px;">
+          <div style="font-size: 3.5rem; margin-bottom: 12px;">🔒</div>
+          <h2 style="margin: 0 0 10px; color: var(--ink);">यह सूचना आपके खाते के लिए उपलब्ध नहीं है</h2>
+          <p class="muted" style="margin-bottom: 24px; font-size: 1rem;">यह नोटिस केवल कुछ विशिष्ट वर्कर्स के लिए उपलब्ध कराया गया है।</p>
+          <a href="/worker.html" class="btn btn-primary" style="display: inline-block; padding: 10px 24px;">वापस डैशबोर्ड पर जाएँ</a>
+        </div>
+      `;
+      return;
+    }
+
     // Hero image
     const heroWrap = $("noticeHeroWrap");
     const heroImg = $("noticeHeroImg");

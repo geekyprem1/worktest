@@ -936,7 +936,33 @@ app.get(
   "/api/notice",
   asyncHandler(async (req, res) => {
     const notice = await db.getSiteNotice();
-    res.json({ ok: true, notice });
+    const user = await getValidUser(req);
+
+    // If admin is requesting, return full notice including targeting settings
+    if (user && user.role === "admin") {
+      return res.json({ ok: true, notice });
+    }
+
+    // If notice is targeted to selected workers
+    if (notice.targetMode === "selected") {
+      const allowedUsers = Array.isArray(notice.targetUsers)
+        ? notice.targetUsers.map(String)
+        : [];
+      const isAllowed = user && allowedUsers.includes(String(user.userId));
+      if (!isAllowed) {
+        return res.json({
+          ok: true,
+          notice: {
+            ...notice,
+            bannerEnabled: false,
+            visible: false,
+            notAllowed: true,
+          },
+        });
+      }
+    }
+
+    res.json({ ok: true, notice: { ...notice, visible: true } });
   })
 );
 
