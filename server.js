@@ -935,8 +935,15 @@ app.post(
 app.get(
   "/api/notice",
   asyncHandler(async (req, res) => {
-    const notice = await db.getSiteNotice();
     const user = await getValidUser(req);
+    const noticeId = req.query && (req.query.id === "banner_2" || req.query.id === "2") ? "banner_2" : "default";
+
+    if (req.query && (req.query.all === "1" || req.query.all === "true")) {
+      const notices = await db.getAllSiteNotices();
+      return res.json({ ok: true, notices });
+    }
+
+    const notice = await db.getSiteNotice(noticeId);
 
     // If admin is requesting, return full notice including targeting settings
     if (user && user.role === "admin") {
@@ -967,15 +974,65 @@ app.get(
   })
 );
 
+app.get(
+  "/api/worker/banners",
+  asyncHandler(async (req, res) => {
+    const user = await getValidUser(req);
+    const notices = await db.getAllSiteNotices();
+    const userUserId = user && user.userId ? String(user.userId).toLowerCase().trim().replace(/^@/, "") : "";
+    const isAdmin = user && user.role === "admin";
+
+    const visibleBanners = [];
+    for (const notice of notices) {
+      if (!notice.bannerEnabled) continue;
+      let isAllowed = true;
+      if (!isAdmin && notice.targetMode === "selected") {
+        const allowedUsers = Array.isArray(notice.targetUsers)
+          ? notice.targetUsers.map((s) => String(s).toLowerCase().trim().replace(/^@/, ""))
+          : [];
+        isAllowed = Boolean(userUserId && allowedUsers.includes(userUserId));
+      }
+      if (isAllowed) {
+        visibleBanners.push({
+          id: notice.id,
+          noticeUrl: notice.id === "banner_2" ? "/notice.html?id=banner_2" : "/notice.html",
+          bannerImageUrl: notice.bannerImageUrl || "/img/banner.jpg",
+          title: notice.title,
+          actionText: notice.actionText,
+        });
+      }
+    }
+    res.json({ ok: true, banners: visibleBanners });
+  })
+);
+
 app.post(
   "/api/admin/notice",
   requireRole("admin"),
   asyncHandler(async (req, res) => {
-    const updated = await db.saveSiteNotice(req.body || {});
+    const noticeId = req.body && (req.body.id === "banner_2" || req.body.id === "2") ? "banner_2" : "default";
+    const updated = await db.saveSiteNotice(req.body || {}, noticeId);
     res.json({
       ok: true,
-      message: "Banner and notice settings saved successfully.",
+      message: `Worker Banner & Notice #${noticeId === "banner_2" ? "2" : "1"} settings saved successfully.`,
       notice: updated,
+    });
+  })
+);
+
+app.post(
+  "/api/admin/upload-banner",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const { fileName, mimeType, fileData } = req.body || {};
+    if (!fileData) {
+      return res.status(400).json({ error: "कृपया इमेज फाइल चुनें।" });
+    }
+    const url = await db.saveBannerImageUpload({ fileName, mimeType, fileData });
+    res.json({
+      ok: true,
+      url,
+      message: "बैनर इमेज सफलतापूर्वक अपलोड हो गई है।",
     });
   })
 );

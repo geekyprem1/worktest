@@ -43,7 +43,11 @@ function getEmbedVideoHtml(url) {
 
 async function loadNotice() {
   try {
-    const res = await fetch("/api/notice");
+    const urlParams = new URLSearchParams(window.location.search);
+    const noticeId = urlParams.get("id") || "default";
+    const res = await fetch(`/api/notice?id=${encodeURIComponent(noticeId)}`, {
+      credentials: "same-origin",
+    });
     const data = await res.json().catch(() => ({}));
     const notice = data.notice || {};
 

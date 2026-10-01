@@ -37,6 +37,16 @@ function show(el, yes = true) {
   el.classList.toggle("hidden", !yes);
 }
 
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function formatMs(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(total / 60);
@@ -568,23 +578,31 @@ $("formSubmitBtn").addEventListener("click", submitForm);
 
 async function loadPromoBanner() {
   try {
-    const data = await api("/api/notice");
-    if (data && data.notice) {
-      const bannerWrap = $("promoBannerWrap");
-      const bannerImg = $("promoBannerImg");
-      if (bannerWrap) {
-        if (data.notice.bannerEnabled === false || data.notice.visible === false) {
-          bannerWrap.classList.add("hidden");
-        } else {
-          bannerWrap.classList.remove("hidden");
-          if (data.notice.bannerImageUrl && bannerImg) {
-            bannerImg.src = data.notice.bannerImageUrl;
-          }
-        }
+    const data = await api("/api/worker/banners");
+    const container = $("promoBannersContainer");
+    const fallbackWrap = $("promoBannerWrap");
+
+    if (data && Array.isArray(data.banners) && data.banners.length > 0) {
+      if (fallbackWrap) fallbackWrap.remove();
+      if (container) {
+        container.innerHTML = "";
+        data.banners.forEach((b) => {
+          const wrap = document.createElement("div");
+          wrap.className = "promo-banner-wrap";
+          wrap.innerHTML = `
+            <a href="${escapeHtml(b.noticeUrl || '/notice.html')}" class="promo-banner-link" title="${escapeHtml(b.title || 'विशेष ऑफर देखें')}">
+              <img src="${escapeHtml(b.bannerImageUrl || '/img/banner.jpg')}" alt="${escapeHtml(b.title || 'विशेष ऑफर देखें')}" />
+            </a>
+          `;
+          container.appendChild(wrap);
+        });
       }
+    } else {
+      if (fallbackWrap) fallbackWrap.classList.add("hidden");
+      if (container) container.innerHTML = "";
     }
   } catch (e) {
-    // Non-blocking fallback
+    console.warn("loadPromoBanner error:", e);
   }
 }
 

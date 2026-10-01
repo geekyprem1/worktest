@@ -997,13 +997,149 @@ if ($("quickCompleteBtn")) {
 }
 
 // ---------- Notice Target Worker Selection ----------
-let noticeTargetMode = "all"; // "all" | "selected"
-let cachedNoticeWorkers = [];
-let selectedNoticeUserIds = new Set();
-let noticeSearchQuery = "";
+// ---------- Banner Switcher Tabs ----------
+let currentBannerTab = "1";
+function setBannerTab(tab) {
+  currentBannerTab = String(tab);
+  const tab1Btn = $("tabBanner1Btn");
+  const tab2Btn = $("tabBanner2Btn");
+  const panel1 = $("bannerTabPanel1");
+  const panel2 = $("bannerTabPanel2");
 
-function setNoticeTargetMode(mode) {
-  noticeTargetMode = mode;
+  if (tab1Btn) tab1Btn.classList.toggle("active", currentBannerTab === "1");
+  if (tab2Btn) tab2Btn.classList.toggle("active", currentBannerTab === "2");
+  if (panel1) show(panel1, currentBannerTab === "1");
+  if (panel2) show(panel2, currentBannerTab === "2");
+}
+
+document.querySelectorAll("#bannerTabsNav .banner-tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setBannerTab(btn.dataset.bannerTab));
+});
+
+// ---------- Banner Image Upload Helper ----------
+function setupBannerUploader({
+  uploadBtnId,
+  fileInputId,
+  resetBtnId,
+  previewImgId,
+  urlInputId,
+  statusId,
+  defaultUrl = "/img/banner.jpg",
+}) {
+  const uploadBtn = $(uploadBtnId);
+  const fileInput = $(fileInputId);
+  const resetBtn = $(resetBtnId);
+  const previewImg = $(previewImgId);
+  const urlInput = $(urlInputId);
+  const statusEl = $(statusId);
+
+  if (urlInput && previewImg) {
+    urlInput.addEventListener("input", () => {
+      const val = urlInput.value.trim();
+      previewImg.src = val || defaultUrl;
+    });
+  }
+
+  if (resetBtn && urlInput && previewImg) {
+    resetBtn.addEventListener("click", () => {
+      urlInput.value = defaultUrl;
+      previewImg.src = defaultUrl;
+      if (statusEl) statusEl.textContent = "";
+    });
+  }
+
+  if (uploadBtn && fileInput) {
+    uploadBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("कृपया केवल एक इमेज (JPG, PNG, WebP) फ़ाइल चुनें।");
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert("इमेज साइज 10MB से कम होना चाहिए।");
+        return;
+      }
+
+      // Show instant preview
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const fileData = e.target.result;
+        if (previewImg) previewImg.src = fileData;
+
+        // Upload to server
+        if (statusEl) {
+          statusEl.style.color = "var(--brand)";
+          statusEl.textContent = "⏳ इमेज अपलोड की जा रही है…";
+        }
+        uploadBtn.disabled = true;
+
+        try {
+          const res = await api("/api/admin/upload-banner", {
+            method: "POST",
+            body: JSON.stringify({
+              fileName: file.name,
+              mimeType: file.type,
+              fileData,
+            }),
+          });
+
+          if (res && res.url) {
+            if (urlInput) urlInput.value = res.url;
+            if (statusEl) {
+              statusEl.style.color = "#16a34a";
+              statusEl.textContent = "✅ इमेज सफलतापूर्वक अपलोड हो गई!";
+              setTimeout(() => {
+                if (statusEl) statusEl.textContent = "";
+              }, 4000);
+            }
+          }
+        } catch (err) {
+          if (statusEl) {
+            statusEl.style.color = "var(--danger)";
+            statusEl.textContent = `❌ अपलोड विफल: ${err.message || "त्रुटि"}`;
+          }
+        } finally {
+          uploadBtn.disabled = false;
+          fileInput.value = "";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+// Setup uploaders for Banner 1 and Banner 2
+setupBannerUploader({
+  uploadBtnId: "notice1UploadBtn",
+  fileInputId: "notice1BannerFileInput",
+  resetBtnId: "notice1ResetImgBtn",
+  previewImgId: "notice1BannerPreview",
+  urlInputId: "noticeBannerImageUrl",
+  statusId: "notice1UploadStatus",
+});
+
+setupBannerUploader({
+  uploadBtnId: "notice2UploadBtn",
+  fileInputId: "notice2BannerFileInput",
+  resetBtnId: "notice2ResetImgBtn",
+  previewImgId: "notice2BannerPreview",
+  urlInputId: "notice2BannerImageUrl",
+  statusId: "notice2UploadStatus",
+});
+
+// ---------- Notice 1 Target Worker Selection ----------
+let notice1TargetMode = "all"; // "all" | "selected"
+let cachedNotice1Workers = [];
+let selectedNotice1UserIds = new Set();
+let notice1SearchQuery = "";
+
+function setNotice1TargetMode(mode) {
+  notice1TargetMode = mode;
   document
     .querySelectorAll("#noticeTargetTabs .assign-mode-tab")
     .forEach((tab) => {
@@ -1012,24 +1148,24 @@ function setNoticeTargetMode(mode) {
 
   const panel = $("noticeSpecificWorkersPanel");
   if (panel) show(panel, mode === "selected");
-  updateNoticeSelectedSummary();
+  updateNotice1SelectedSummary();
 }
 
-function updateNoticeSelectedSummary() {
-  const count = selectedNoticeUserIds.size;
+function updateNotice1SelectedSummary() {
+  const count = selectedNotice1UserIds.size;
   const countEl = $("noticeSelectedCount");
   if (countEl) {
     countEl.textContent = `${count} worker${count === 1 ? "" : "s"} selected`;
   }
 }
 
-function renderNoticeTargetWorkers(perUser) {
-  if (perUser) cachedNoticeWorkers = perUser;
+function renderNotice1TargetWorkers(perUser) {
+  if (perUser) cachedNotice1Workers = perUser;
   const listEl = $("noticeWorkersList");
   if (!listEl) return;
 
-  const query = noticeSearchQuery.toLowerCase();
-  const filtered = cachedNoticeWorkers.filter((u) => {
+  const query = notice1SearchQuery.toLowerCase();
+  const filtered = cachedNotice1Workers.filter((u) => {
     if (!query) return true;
     const nameMatch = (u.name || "").toLowerCase().includes(query);
     const idMatch = (u.userId || "").toLowerCase().includes(query);
@@ -1038,17 +1174,17 @@ function renderNoticeTargetWorkers(perUser) {
 
   if (!filtered.length) {
     listEl.innerHTML = `<div class="muted" style="padding: 14px; grid-column: 1 / -1; text-align: center;">${
-      cachedNoticeWorkers.length === 0
+      cachedNotice1Workers.length === 0
         ? "No workers yet."
         : "No workers match your search."
     }</div>`;
-    updateNoticeSelectedSummary();
+    updateNotice1SelectedSummary();
     return;
   }
 
   listEl.innerHTML = "";
   filtered.forEach((u) => {
-    const isSelected = selectedNoticeUserIds.has(u.userId);
+    const isSelected = selectedNotice1UserIds.has(u.userId);
     const card = document.createElement("div");
     card.className = `worker-select-card${isSelected ? " selected" : ""}${
       u.banned ? " banned" : ""
@@ -1079,16 +1215,16 @@ function renderNoticeTargetWorkers(perUser) {
 
     const toggleWorker = () => {
       if (u.banned) return;
-      if (selectedNoticeUserIds.has(u.userId)) {
-        selectedNoticeUserIds.delete(u.userId);
+      if (selectedNotice1UserIds.has(u.userId)) {
+        selectedNotice1UserIds.delete(u.userId);
         checkbox.checked = false;
         card.classList.remove("selected");
       } else {
-        selectedNoticeUserIds.add(u.userId);
+        selectedNotice1UserIds.add(u.userId);
         checkbox.checked = true;
         card.classList.add("selected");
       }
-      updateNoticeSelectedSummary();
+      updateNotice1SelectedSummary();
     };
 
     card.addEventListener("click", (e) => {
@@ -1102,64 +1238,338 @@ function renderNoticeTargetWorkers(perUser) {
         return;
       }
       if (checkbox.checked) {
-        selectedNoticeUserIds.add(u.userId);
+        selectedNotice1UserIds.add(u.userId);
         card.classList.add("selected");
       } else {
-        selectedNoticeUserIds.delete(u.userId);
+        selectedNotice1UserIds.delete(u.userId);
         card.classList.remove("selected");
       }
-      updateNoticeSelectedSummary();
+      updateNotice1SelectedSummary();
     });
 
     listEl.appendChild(card);
   });
 
-  updateNoticeSelectedSummary();
+  updateNotice1SelectedSummary();
 }
 
+// Notice 1 targeting event listeners
+document.querySelectorAll("#noticeTargetTabs .assign-mode-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setNotice1TargetMode(tab.dataset.noticeMode));
+});
+
+if ($("noticeWorkerSearch")) {
+  $("noticeWorkerSearch").addEventListener("input", (e) => {
+    notice1SearchQuery = e.target.value.trim().toLowerCase();
+    renderNotice1TargetWorkers(cachedNotice1Workers);
+  });
+}
+
+if ($("noticeSelectAllBtn")) {
+  $("noticeSelectAllBtn").addEventListener("click", () => {
+    const query = notice1SearchQuery.toLowerCase();
+    cachedNotice1Workers
+      .filter((u) => !u.banned)
+      .filter((u) => {
+        if (!query) return true;
+        return (
+          (u.name || "").toLowerCase().includes(query) ||
+          (u.userId || "").toLowerCase().includes(query)
+        );
+      })
+      .forEach((u) => selectedNotice1UserIds.add(u.userId));
+    renderNotice1TargetWorkers(cachedNotice1Workers);
+  });
+}
+
+if ($("noticeDeselectAllBtn")) {
+  $("noticeDeselectAllBtn").addEventListener("click", () => {
+    const query = notice1SearchQuery.toLowerCase();
+    if (!query) {
+      selectedNotice1UserIds.clear();
+    } else {
+      cachedNotice1Workers
+        .filter((u) => {
+          return (
+            (u.name || "").toLowerCase().includes(query) ||
+            (u.userId || "").toLowerCase().includes(query)
+          );
+        })
+        .forEach((u) => selectedNotice1UserIds.delete(u.userId));
+    }
+    renderNotice1TargetWorkers(cachedNotice1Workers);
+  });
+}
+
+// ---------- Notice 2 Target Worker Selection ----------
+let notice2TargetMode = "all"; // "all" | "selected"
+let cachedNotice2Workers = [];
+let selectedNotice2UserIds = new Set();
+let notice2SearchQuery = "";
+
+function setNotice2TargetMode(mode) {
+  notice2TargetMode = mode;
+  document
+    .querySelectorAll("#notice2TargetTabs .assign-mode-tab")
+    .forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.notice2Mode === mode);
+    });
+
+  const panel = $("notice2SpecificWorkersPanel");
+  if (panel) show(panel, mode === "selected");
+  updateNotice2SelectedSummary();
+}
+
+function updateNotice2SelectedSummary() {
+  const count = selectedNotice2UserIds.size;
+  const countEl = $("notice2SelectedCount");
+  if (countEl) {
+    countEl.textContent = `${count} worker${count === 1 ? "" : "s"} selected`;
+  }
+}
+
+function renderNotice2TargetWorkers(perUser) {
+  if (perUser) cachedNotice2Workers = perUser;
+  const listEl = $("notice2WorkersList");
+  if (!listEl) return;
+
+  const query = notice2SearchQuery.toLowerCase();
+  const filtered = cachedNotice2Workers.filter((u) => {
+    if (!query) return true;
+    const nameMatch = (u.name || "").toLowerCase().includes(query);
+    const idMatch = (u.userId || "").toLowerCase().includes(query);
+    return nameMatch || idMatch;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="muted" style="padding: 14px; grid-column: 1 / -1; text-align: center;">${
+      cachedNotice2Workers.length === 0
+        ? "No workers yet."
+        : "No workers match your search."
+    }</div>`;
+    updateNotice2SelectedSummary();
+    return;
+  }
+
+  listEl.innerHTML = "";
+  filtered.forEach((u) => {
+    const isSelected = selectedNotice2UserIds.has(u.userId);
+    const card = document.createElement("div");
+    card.className = `worker-select-card${isSelected ? " selected" : ""}${
+      u.banned ? " banned" : ""
+    }`;
+
+    const modeText =
+      (u.settings && u.settings.taskMode) || u.mode || "surveys";
+
+    card.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(u.userId)}" ${
+      isSelected ? "checked" : ""
+    } ${u.banned ? "disabled" : ""} />
+      <div class="worker-select-info">
+        <div class="worker-select-name">${escapeHtml(u.name)}</div>
+        <div class="worker-select-sub">
+          <code>@${escapeHtml(u.userId)}</code>
+          <span class="worker-select-badge">${escapeHtml(modeText)}</span>
+          ${
+            u.banned
+              ? '<span class="badge badge-warn" style="font-size:0.65rem; padding: 1px 4px;">Banned</span>'
+              : '<span class="badge badge-ok" style="font-size:0.65rem; padding: 1px 4px;">Active</span>'
+          }
+        </div>
+      </div>
+    `;
+
+    const checkbox = card.querySelector("input[type='checkbox']");
+
+    const toggleWorker = () => {
+      if (u.banned) return;
+      if (selectedNotice2UserIds.has(u.userId)) {
+        selectedNotice2UserIds.delete(u.userId);
+        checkbox.checked = false;
+        card.classList.remove("selected");
+      } else {
+        selectedNotice2UserIds.add(u.userId);
+        checkbox.checked = true;
+        card.classList.add("selected");
+      }
+      updateNotice2SelectedSummary();
+    };
+
+    card.addEventListener("click", (e) => {
+      if (e.target === checkbox) return;
+      toggleWorker();
+    });
+
+    checkbox.addEventListener("change", () => {
+      if (u.banned) {
+        checkbox.checked = false;
+        return;
+      }
+      if (checkbox.checked) {
+        selectedNotice2UserIds.add(u.userId);
+        card.classList.add("selected");
+      } else {
+        selectedNotice2UserIds.delete(u.userId);
+        card.classList.remove("selected");
+      }
+      updateNotice2SelectedSummary();
+    });
+
+    listEl.appendChild(card);
+  });
+
+  updateNotice2SelectedSummary();
+}
+
+// Notice 2 targeting event listeners
+document.querySelectorAll("#notice2TargetTabs .assign-mode-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setNotice2TargetMode(tab.dataset.notice2Mode));
+});
+
+if ($("notice2WorkerSearch")) {
+  $("notice2WorkerSearch").addEventListener("input", (e) => {
+    notice2SearchQuery = e.target.value.trim().toLowerCase();
+    renderNotice2TargetWorkers(cachedNotice2Workers);
+  });
+}
+
+if ($("notice2SelectAllBtn")) {
+  $("notice2SelectAllBtn").addEventListener("click", () => {
+    const query = notice2SearchQuery.toLowerCase();
+    cachedNotice2Workers
+      .filter((u) => !u.banned)
+      .filter((u) => {
+        if (!query) return true;
+        return (
+          (u.name || "").toLowerCase().includes(query) ||
+          (u.userId || "").toLowerCase().includes(query)
+        );
+      })
+      .forEach((u) => selectedNotice2UserIds.add(u.userId));
+    renderNotice2TargetWorkers(cachedNotice2Workers);
+  });
+}
+
+if ($("notice2DeselectAllBtn")) {
+  $("notice2DeselectAllBtn").addEventListener("click", () => {
+    const query = notice2SearchQuery.toLowerCase();
+    if (!query) {
+      selectedNotice2UserIds.clear();
+    } else {
+      cachedNotice2Workers
+        .filter((u) => {
+          return (
+            (u.name || "").toLowerCase().includes(query) ||
+            (u.userId || "").toLowerCase().includes(query)
+          );
+        })
+        .forEach((u) => selectedNotice2UserIds.delete(u.userId));
+    }
+    renderNotice2TargetWorkers(cachedNotice2Workers);
+  });
+}
+
+// Helper: render both notice targeting lists
+function renderNoticeTargetWorkers(perUser) {
+  renderNotice1TargetWorkers(perUser);
+  renderNotice2TargetWorkers(perUser);
+}
+
+// ---------- Load Notice Settings (Notice 1 & Notice 2) ----------
 async function loadNoticeSettings() {
   try {
-    const data = await api("/api/notice");
-    const notice = data.notice || {};
-    if ($("noticeBannerEnabled")) $("noticeBannerEnabled").checked = notice.bannerEnabled !== false;
-    if ($("noticeBannerImageUrl")) $("noticeBannerImageUrl").value = notice.bannerImageUrl || "/img/banner.jpg";
-    if ($("noticePageTitle")) $("noticePageTitle").value = notice.title || "";
-    if ($("noticePageContent")) $("noticePageContent").value = notice.content || "";
-    if ($("noticeActionText")) $("noticeActionText").value = notice.actionText || "";
-    if ($("noticeActionUrl")) $("noticeActionUrl").value = notice.actionUrl || "";
-    if ($("noticeVideoUrl")) $("noticeVideoUrl").value = notice.videoUrl || "";
+    const [res1, res2] = await Promise.all([
+      api("/api/notice?id=default").catch(() => ({})),
+      api("/api/notice?id=banner_2").catch(() => ({})),
+    ]);
+
+    const notice1 = (res1 && res1.notice) || {};
+    const notice2 = (res2 && res2.notice) || {};
+
+    // Notice 1 Population
+    if ($("noticeBannerEnabled")) $("noticeBannerEnabled").checked = notice1.bannerEnabled !== false;
+    if ($("noticeBannerImageUrl")) {
+      $("noticeBannerImageUrl").value = notice1.bannerImageUrl || "/img/banner.jpg";
+    }
+    if ($("notice1BannerPreview")) {
+      $("notice1BannerPreview").src = notice1.bannerImageUrl || "/img/banner.jpg";
+    }
+    if ($("noticePageTitle")) $("noticePageTitle").value = notice1.title || "";
+    if ($("noticePageContent")) $("noticePageContent").value = notice1.content || "";
+    if ($("noticeActionText")) $("noticeActionText").value = notice1.actionText || "";
+    if ($("noticeActionUrl")) $("noticeActionUrl").value = notice1.actionUrl || "";
+    if ($("noticeVideoUrl")) $("noticeVideoUrl").value = notice1.videoUrl || "";
     if ($("noticeExtraImages")) {
-      $("noticeExtraImages").value = Array.isArray(notice.extraImages)
-        ? notice.extraImages.join("\n")
+      $("noticeExtraImages").value = Array.isArray(notice1.extraImages)
+        ? notice1.extraImages.join("\n")
         : "";
     }
 
-    // Set targeting settings
-    if (notice.targetMode) {
-      setNoticeTargetMode(notice.targetMode);
+    if (notice1.targetMode) {
+      setNotice1TargetMode(notice1.targetMode);
     } else {
-      setNoticeTargetMode("all");
+      setNotice1TargetMode("all");
     }
 
-    if (Array.isArray(notice.targetUsers)) {
-      selectedNoticeUserIds = new Set(notice.targetUsers.map(String));
+    if (Array.isArray(notice1.targetUsers)) {
+      selectedNotice1UserIds = new Set(notice1.targetUsers.map(String));
     } else {
-      selectedNoticeUserIds = new Set();
+      selectedNotice1UserIds = new Set();
     }
-    renderNoticeTargetWorkers(cachedNoticeWorkers);
+    renderNotice1TargetWorkers(cachedNotice1Workers);
+
+    const ind1 = $("tabBanner1Indicator");
+    if (ind1) ind1.classList.toggle("active", notice1.bannerEnabled !== false);
+
+    // Notice 2 Population
+    if ($("notice2BannerEnabled")) $("notice2BannerEnabled").checked = Boolean(notice2.bannerEnabled);
+    if ($("notice2BannerImageUrl")) {
+      $("notice2BannerImageUrl").value = notice2.bannerImageUrl || "/img/banner.jpg";
+    }
+    if ($("notice2BannerPreview")) {
+      $("notice2BannerPreview").src = notice2.bannerImageUrl || "/img/banner.jpg";
+    }
+    if ($("notice2PageTitle")) $("notice2PageTitle").value = notice2.title || "";
+    if ($("notice2PageContent")) $("notice2PageContent").value = notice2.content || "";
+    if ($("notice2ActionText")) $("notice2ActionText").value = notice2.actionText || "";
+    if ($("notice2ActionUrl")) $("notice2ActionUrl").value = notice2.actionUrl || "";
+    if ($("notice2VideoUrl")) $("notice2VideoUrl").value = notice2.videoUrl || "";
+    if ($("notice2ExtraImages")) {
+      $("notice2ExtraImages").value = Array.isArray(notice2.extraImages)
+        ? notice2.extraImages.join("\n")
+        : "";
+    }
+
+    if (notice2.targetMode) {
+      setNotice2TargetMode(notice2.targetMode);
+    } else {
+      setNotice2TargetMode("all");
+    }
+
+    if (Array.isArray(notice2.targetUsers)) {
+      selectedNotice2UserIds = new Set(notice2.targetUsers.map(String));
+    } else {
+      selectedNotice2UserIds = new Set();
+    }
+    renderNotice2TargetWorkers(cachedNotice2Workers);
+
+    const ind2 = $("tabBanner2Indicator");
+    if (ind2) ind2.classList.toggle("active", Boolean(notice2.bannerEnabled));
   } catch (err) {
     console.warn("Could not load notice settings:", err);
   }
 }
 
-async function saveNoticeSettings() {
+// ---------- Save Notice 1 Settings ----------
+async function saveNotice1Settings() {
   const saveBtn = $("saveNoticeBtn");
   const msgEl = $("noticeSaveMessage");
   const errEl = $("noticeSaveError");
   show(msgEl, false);
   show(errEl, false);
 
-  if (noticeTargetMode === "selected" && selectedNoticeUserIds.size === 0) {
+  if (notice1TargetMode === "selected" && selectedNotice1UserIds.size === 0) {
     errEl.textContent = "कृपया कम से कम एक वर्कर को चेकबॉक्स से चुनें या 'सभी वर्कर्स' विकल्प चुनें।";
     show(errEl, true);
     return;
@@ -1184,6 +1594,7 @@ async function saveNoticeSettings() {
     const res = await api("/api/admin/notice", {
       method: "POST",
       body: JSON.stringify({
+        id: "default",
         bannerEnabled,
         bannerImageUrl,
         title,
@@ -1192,12 +1603,15 @@ async function saveNoticeSettings() {
         actionUrl,
         videoUrl,
         extraImages,
-        targetMode: noticeTargetMode,
-        targetUsers: Array.from(selectedNoticeUserIds),
+        targetMode: notice1TargetMode,
+        targetUsers: Array.from(selectedNotice1UserIds),
       }),
     });
 
-    msgEl.textContent = res.message || "Settings saved successfully.";
+    const ind1 = $("tabBanner1Indicator");
+    if (ind1) ind1.classList.toggle("active", bannerEnabled);
+
+    msgEl.textContent = "✅ " + (res.message || "Banner #1 settings saved successfully.");
     show(msgEl, true);
     setTimeout(() => show(msgEl, false), 4000);
   } catch (err) {
@@ -1209,55 +1623,72 @@ async function saveNoticeSettings() {
 }
 
 if ($("saveNoticeBtn")) {
-  $("saveNoticeBtn").addEventListener("click", saveNoticeSettings);
+  $("saveNoticeBtn").addEventListener("click", saveNotice1Settings);
 }
 
-// Notice targeting event listeners
-document.querySelectorAll("#noticeTargetTabs .assign-mode-tab").forEach((tab) => {
-  tab.addEventListener("click", () => setNoticeTargetMode(tab.dataset.noticeMode));
-});
+// ---------- Save Notice 2 Settings ----------
+async function saveNotice2Settings() {
+  const saveBtn = $("saveNotice2Btn");
+  const msgEl = $("notice2SaveMessage");
+  const errEl = $("notice2SaveError");
+  show(msgEl, false);
+  show(errEl, false);
 
-if ($("noticeWorkerSearch")) {
-  $("noticeWorkerSearch").addEventListener("input", (e) => {
-    noticeSearchQuery = e.target.value.trim().toLowerCase();
-    renderNoticeTargetWorkers(cachedNoticeWorkers);
-  });
+  if (notice2TargetMode === "selected" && selectedNotice2UserIds.size === 0) {
+    errEl.textContent = "कृपया कम से कम एक वर्कर को चेकबॉक्स से चुनें या 'सभी वर्कर्स' विकल्प चुनें।";
+    show(errEl, true);
+    return;
+  }
+
+  saveBtn.disabled = true;
+
+  try {
+    const bannerEnabled = $("notice2BannerEnabled").checked;
+    const bannerImageUrl = $("notice2BannerImageUrl").value.trim();
+    const title = $("notice2PageTitle").value.trim();
+    const content = $("notice2PageContent").value;
+    const actionText = $("notice2ActionText").value.trim();
+    const actionUrl = $("notice2ActionUrl").value.trim();
+    const videoUrl = $("notice2VideoUrl").value.trim();
+    const rawImages = $("notice2ExtraImages").value;
+    const extraImages = rawImages
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const res = await api("/api/admin/notice", {
+      method: "POST",
+      body: JSON.stringify({
+        id: "banner_2",
+        bannerEnabled,
+        bannerImageUrl,
+        title,
+        content,
+        actionText,
+        actionUrl,
+        videoUrl,
+        extraImages,
+        targetMode: notice2TargetMode,
+        targetUsers: Array.from(selectedNotice2UserIds),
+      }),
+    });
+
+    const ind2 = $("tabBanner2Indicator");
+    if (ind2) ind2.classList.toggle("active", bannerEnabled);
+
+    msgEl.textContent = "✅ " + (res.message || "Banner #2 settings saved successfully.");
+    show(msgEl, true);
+    setTimeout(() => show(msgEl, false), 4000);
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save settings.";
+    show(errEl, true);
+  } finally {
+    saveBtn.disabled = false;
+  }
 }
 
-if ($("noticeSelectAllBtn")) {
-  $("noticeSelectAllBtn").addEventListener("click", () => {
-    const query = noticeSearchQuery.toLowerCase();
-    cachedNoticeWorkers
-      .filter((u) => !u.banned)
-      .filter((u) => {
-        if (!query) return true;
-        return (
-          (u.name || "").toLowerCase().includes(query) ||
-          (u.userId || "").toLowerCase().includes(query)
-        );
-      })
-      .forEach((u) => selectedNoticeUserIds.add(u.userId));
-    renderNoticeTargetWorkers(cachedNoticeWorkers);
-  });
-}
-
-if ($("noticeDeselectAllBtn")) {
-  $("noticeDeselectAllBtn").addEventListener("click", () => {
-    const query = noticeSearchQuery.toLowerCase();
-    if (!query) {
-      selectedNoticeUserIds.clear();
-    } else {
-      cachedNoticeWorkers
-        .filter((u) => {
-          return (
-            (u.name || "").toLowerCase().includes(query) ||
-            (u.userId || "").toLowerCase().includes(query)
-          );
-        })
-        .forEach((u) => selectedNoticeUserIds.delete(u.userId));
-    }
-    renderNoticeTargetWorkers(cachedNoticeWorkers);
-  });
+if ($("saveNotice2Btn")) {
+  $("saveNotice2Btn").addEventListener("click", saveNotice2Settings);
 }
 
 async function loadWorkerResponses() {
